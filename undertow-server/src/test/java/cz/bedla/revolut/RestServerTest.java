@@ -1,9 +1,9 @@
 package cz.bedla.revolut;
 
-import java.util.concurrent.TimeUnit;
-
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
+
+import java.util.concurrent.TimeUnit;
 
 import static io.restassured.RestAssured.given;
 import static java.time.Duration.ofSeconds;
@@ -13,8 +13,8 @@ import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.greaterThan;
 import static org.junit.jupiter.api.Assertions.assertTimeoutPreemptively;
 
-class RevolutServerTest {
-    private RevolutServer fixture = new RevolutServer("localhost", 8181, FooApplication.class);
+class RestServerTest {
+    private RestServer fixture = new RestServer("localhost", 0, FooApplication.class);
 
     @Test
     void startStopStart() {

@@ -1,39 +1,41 @@
 package cz.bedla.revolut;
 
-import java.util.concurrent.atomic.AtomicReference;
-
-import javax.servlet.ServletException;
-import javax.ws.rs.core.Application;
-
 import io.undertow.Handlers;
 import io.undertow.Undertow;
 import io.undertow.server.handlers.PathHandler;
 import io.undertow.servlet.Servlets;
 import io.undertow.servlet.api.DeploymentInfo;
 import io.undertow.servlet.api.DeploymentManager;
+import org.apache.commons.lang3.Validate;
 import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.glassfish.jersey.servlet.ServletContainer;
 import org.glassfish.jersey.servlet.ServletProperties;
 
+import javax.servlet.ServletException;
+import javax.ws.rs.core.Application;
+import java.net.InetSocketAddress;
+import java.net.SocketAddress;
+import java.util.List;
+import java.util.concurrent.atomic.AtomicReference;
+
 import static org.apache.commons.lang3.Validate.notEmpty;
-import static org.apache.commons.lang3.Validate.notNull;
 import static org.apache.commons.lang3.Validate.validState;
 
-public final class RevolutServer {
+public final class RestServer {
     private final String host;
-    private final int port;
+    private final int requestedPort;
     private final Class<? extends Application> applicationClass;
     private final AtomicReference<Undertow> serverReference = new AtomicReference<>();
 
-    public RevolutServer(String host, int port, Class<? extends Application> applicationClass) {
+    public RestServer(String host, int requestedPort, Class<? extends Application> applicationClass) {
         this.host = notEmpty(host, "host cannot be empty");
-        this.port = port;
-        this.applicationClass = notNull(applicationClass, "applicationClass cannot be null");
+        this.requestedPort = requestedPort;
+        this.applicationClass = Validate.notNull(applicationClass, "applicationClass cannot be null");
     }
 
     public void start() {
         DeploymentInfo servletBuilder = Servlets.deployment()
-                .setClassLoader(RevolutServer.class.getClassLoader())
+                .setClassLoader(RestServer.class.getClassLoader())
                 .setContextPath("/api")
                 .setDeploymentName("revolut.war")
                 .addServlets(
@@ -52,7 +54,7 @@ public final class RevolutServer {
         }
 
         Undertow server = Undertow.builder()
-                .addHttpListener(port, host)
+                .addHttpListener(requestedPort, host)
                 .setHandler(path)
                 .build();
 
@@ -74,7 +76,12 @@ public final class RevolutServer {
     }
 
     public int getPort() {
-        return port;
+        final Undertow undertow = Validate.notNull(serverReference.get(), "Server not started");
+        final List<Undertow.ListenerInfo> listeners = undertow.getListenerInfo();
+        validState(listeners.size() == 1, "Expecting one http listener");
+        final SocketAddress address = listeners.get(0).getAddress();
+        validState(address instanceof InetSocketAddress, "Expecting address of " + InetSocketAddress.class);
+        return ((InetSocketAddress) address).getPort();
     }
 }
 
