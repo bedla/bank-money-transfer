@@ -3,72 +3,58 @@ package cz.bedla.revolut;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
-import java.util.concurrent.TimeUnit;
-
 import static io.restassured.RestAssured.given;
-import static java.time.Duration.ofSeconds;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.greaterThan;
-import static org.junit.jupiter.api.Assertions.assertTimeoutPreemptively;
 
 class RestServerTest {
     private RestServer fixture = new RestServer("localhost", 0, FooApplication.class);
 
     @Test
-    void startStopStart() {
-        assertTimeoutPreemptively(ofSeconds(20), () -> {
-            assertThat(fixture.isRunning()).isFalse();
-            fixture.start();
-            assertThat(fixture.isRunning()).isTrue();
-            TimeUnit.SECONDS.sleep(3);
-            fixture.stop();
-            assertThat(fixture.isRunning()).isFalse();
-            TimeUnit.SECONDS.sleep(3);
-            fixture.start();
-            assertThat(fixture.isRunning()).isTrue();
-        });
+    void startStopStart() throws InterruptedException {
+        assertThat(fixture.isRunning()).isFalse();
+        fixture.start();
+        assertThat(fixture.isRunning()).isTrue();
+        fixture.stop();
+        assertThat(fixture.isRunning()).isFalse();
+        fixture.start();
+        assertThat(fixture.isRunning()).isTrue();
     }
 
     @Test
-    void doubleStart() {
-        assertTimeoutPreemptively(ofSeconds(5), () -> {
-            fixture.start();
-            assertThatThrownBy(() -> fixture.start())
-                    .isInstanceOf(IllegalStateException.class)
-                    .hasMessage("Server already started");
-        });
+    void doubleStart() throws InterruptedException {
+        fixture.start();
+        assertThatThrownBy(() -> fixture.start())
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessage("Server already started");
     }
 
     @Test
     void doubleStop() {
-        assertTimeoutPreemptively(ofSeconds(5), () -> {
-            fixture.start();
-            fixture.stop();
-            assertThatThrownBy(() -> fixture.stop())
-                    .isInstanceOf(IllegalStateException.class)
-                    .hasMessage("Unable to stop stopped server");
-        });
+        fixture.start();
+        fixture.stop();
+        assertThatThrownBy(() -> fixture.stop())
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessage("Unable to stop stopped server");
     }
 
     @Test
     void restCallToFooEndpoint() {
-        assertTimeoutPreemptively(ofSeconds(5), () -> {
-            fixture.start();
+        fixture.start();
 
-            given()
-                    .log().all()
-                    .port(fixture.getPort())
-                    .when()
-                    .get("/api/foo")
-                    .then()
-                    .log().all()
-                    .statusCode(200)
-                    .body(
-                            "number", greaterThan(0L),
-                            "text", equalTo("foo"));
-        });
+        given()
+                .log().all()
+                .port(fixture.getPort())
+                .when()
+                .get("/api/foo")
+                .then()
+                .log().all()
+                .statusCode(200)
+                .body(
+                        "number", greaterThan(0L),
+                        "text", equalTo("foo"));
     }
 
     @AfterEach
@@ -76,7 +62,7 @@ class RestServerTest {
         try {
             fixture.stop();
         } catch (Exception e) {
-            // graceful teardown after test
+            // ignore while stopping after test
         }
     }
 }
