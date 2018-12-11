@@ -1,14 +1,14 @@
 package cz.bedla.revolut.dao.impl
 
 import cz.bedla.revolut.dao.AccountDao
-import cz.bedla.revolut.dao.DaoDslSupport
+import cz.bedla.revolut.dao.createDsl
 import cz.bedla.revolut.domain.Account
 import cz.bedla.revolut.domain.AccountType
 import cz.bedla.revolut.jooq.tables.Account.ACCOUNT
 import org.jooq.Record
 
 
-class AccountDaoImpl() : AccountDao, DaoDslSupport {
+class AccountDaoImpl() : AccountDao {
     override fun createAccount(account: Account): Account {
         val dsl = createDsl()
 

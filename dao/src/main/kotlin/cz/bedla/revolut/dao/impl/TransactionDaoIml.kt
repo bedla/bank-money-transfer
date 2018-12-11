@@ -1,8 +1,8 @@
 package cz.bedla.revolut.dao.impl
 
 import cz.bedla.revolut.dao.AccountDao
-import cz.bedla.revolut.dao.DaoDslSupport
 import cz.bedla.revolut.dao.TransactionDao
+import cz.bedla.revolut.dao.createDsl
 import cz.bedla.revolut.domain.Account
 import cz.bedla.revolut.domain.Transaction
 import cz.bedla.revolut.jooq.Tables.TRANSACTION
@@ -10,7 +10,7 @@ import cz.bedla.revolut.jooq.tables.records.TransactionRecord
 import org.jooq.impl.DSL.sum
 import java.math.BigDecimal
 
-class TransactionDaoIml(private val accountDao: AccountDao) : TransactionDao, DaoDslSupport {
+class TransactionDaoIml(private val accountDao: AccountDao) : TransactionDao {
     override fun create(item: Transaction): Transaction {
         val dsl = createDsl()
 

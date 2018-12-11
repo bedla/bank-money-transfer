@@ -3,7 +3,7 @@ package cz.bedla.revolut.dao
 import cz.bedla.revolut.domain.WaitingRoom
 import cz.bedla.revolut.domain.WaitingRoomState
 
-interface WaitingRoomDao {
+interface WaitingRoomDao : Dao {
     fun create(item: WaitingRoom): WaitingRoom
 
     fun findWaitingRoom(id: Int): WaitingRoom?

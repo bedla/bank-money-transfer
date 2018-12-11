@@ -1,15 +1,15 @@
 package cz.bedla.revolut.dao.impl
 
 import cz.bedla.revolut.dao.AccountDao
-import cz.bedla.revolut.dao.DaoDslSupport
 import cz.bedla.revolut.dao.WaitingRoomDao
+import cz.bedla.revolut.dao.createDsl
 import cz.bedla.revolut.domain.WaitingRoom
 import cz.bedla.revolut.domain.WaitingRoomState
 import cz.bedla.revolut.jooq.Tables.WAITING_ROOM
 import cz.bedla.revolut.jooq.tables.records.WaitingRoomRecord
 import org.jooq.exception.DataChangedException
 
-class WaitingRoomDaoImpl(private val accountDao: AccountDao) : WaitingRoomDao, DaoDslSupport {
+class WaitingRoomDaoImpl(private val accountDao: AccountDao) : WaitingRoomDao {
     override fun create(item: WaitingRoom): WaitingRoom {
         val dsl = createDsl()
 

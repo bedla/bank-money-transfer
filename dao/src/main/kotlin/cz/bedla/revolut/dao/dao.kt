@@ -6,9 +6,10 @@ import org.jooq.SQLDialect
 import org.jooq.conf.Settings
 import org.jooq.impl.DSL
 
-interface DaoDslSupport {
-    fun createDsl(): DSLContext = DSL.using(
-            Transactional.currentConnection(),
-            SQLDialect.H2,
-            Settings().withExecuteWithOptimisticLocking(true))
+interface Dao {
 }
+
+fun Dao.createDsl(): DSLContext = DSL.using(
+        Transactional.currentConnection(),
+        SQLDialect.H2,
+        Settings().withExecuteWithOptimisticLocking(true))

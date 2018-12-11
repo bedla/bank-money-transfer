@@ -4,7 +4,7 @@ import cz.bedla.revolut.domain.Account
 import cz.bedla.revolut.domain.Transaction
 import java.math.BigDecimal
 
-interface TransactionDao {
+interface TransactionDao : Dao {
     fun create(item: Transaction): Transaction
 
     fun calculateBalance(account: Account): BigDecimal
