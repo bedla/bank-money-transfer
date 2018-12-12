@@ -1,8 +1,9 @@
-package cz.bedla.revolut.context
+package cz.bedla.revolut.context.impl
 
 import cz.bedla.revolut.Database
 import cz.bedla.revolut.DatabaseImpl
 import cz.bedla.revolut.DbInitializer
+import cz.bedla.revolut.context.ApplicationContext
 import cz.bedla.revolut.service.AccountDao
 import cz.bedla.revolut.service.WaitingRoomDao
 import cz.bedla.revolut.service.WaitingRoomService

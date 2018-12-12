@@ -14,7 +14,7 @@
     <dependencies>
         <dependency>
             <groupId>${project.groupId}</groupId>
-            <artifactId>application</artifactId>
+            <artifactId>application-context</artifactId>
             <version>${project.version}</version>
         </dependency>
         <dependency>
