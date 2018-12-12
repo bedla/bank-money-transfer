@@ -18,11 +18,11 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 @ExtendWith(TempDirectory.class)
 class DatabaseTest {
-    private Database fixture;
+    private DatabaseImpl fixture;
 
     @BeforeEach
     void setUp(@TempDirectory.TempDir Path tempDir) {
-        fixture = new Database(tempDir.toFile());
+        fixture = new DatabaseImpl(tempDir.toFile());
     }
 
     @Test

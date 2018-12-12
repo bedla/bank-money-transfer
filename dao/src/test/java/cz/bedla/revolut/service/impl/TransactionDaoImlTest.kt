@@ -1,6 +1,6 @@
 package cz.bedla.revolut.service.impl
 
-import cz.bedla.revolut.Database
+import cz.bedla.revolut.DatabaseImpl
 import cz.bedla.revolut.DbInitializer
 import cz.bedla.revolut.service.AccountDao
 import cz.bedla.revolut.domain.Account
@@ -21,11 +21,11 @@ class TransactionDaoImlTest {
     private lateinit var fixture: TransactionDaoIml
     private lateinit var accountDao: AccountDao
 
-    private lateinit var database: Database
+    private lateinit var database: DatabaseImpl
 
     @BeforeEach
     fun setUp(@TempDirectory.TempDir tempDir: Path) {
-        database = Database(tempDir.toFile())
+        database = DatabaseImpl(tempDir.toFile())
         database.start()
         DbInitializer("database.sql", database.dataSource).run()
 

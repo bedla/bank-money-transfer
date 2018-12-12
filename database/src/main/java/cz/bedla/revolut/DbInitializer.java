@@ -7,12 +7,16 @@ import org.apache.commons.lang3.exception.ExceptionUtils;
 import javax.sql.DataSource;
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.sql.Connection;
+import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.Arrays;
 import java.util.List;
+
+import static org.apache.commons.lang3.Validate.notNull;
 
 public final class DbInitializer {
     private final String sqlScript;
@@ -21,6 +25,20 @@ public final class DbInitializer {
     public DbInitializer(String sqlScript, DataSource dataSource) {
         this.sqlScript = sqlScript;
         this.dataSource = dataSource;
+    }
+
+    public boolean checkDbInitialized() {
+        try (Connection connection = dataSource.getConnection()) {
+            try (Statement statement = connection.createStatement()) {
+                try (ResultSet ignored = statement.executeQuery("SELECT COUNT(*) FROM waiting_room")) {
+                    return true;
+                } catch (Exception e) {
+                    return false;
+                }
+            }
+        } catch (SQLException e) {
+            return ExceptionUtils.rethrow(e);
+        }
     }
 
     public void run() {
@@ -41,7 +59,9 @@ public final class DbInitializer {
     }
 
     private List<String> sqlStatements() {
-        try (InputStream inputStream = Thread.currentThread().getContextClassLoader().getResourceAsStream(sqlScript)) {
+        final URL resource = notNull(Thread.currentThread().getContextClassLoader().getResource(sqlScript),
+                "Unable to find class-path resource: " + sqlScript);
+        try (InputStream inputStream = resource.openStream()) {
             final String content = IOUtils.toString(inputStream, StandardCharsets.UTF_8);
             return splitStatements(content);
         } catch (IOException e) {

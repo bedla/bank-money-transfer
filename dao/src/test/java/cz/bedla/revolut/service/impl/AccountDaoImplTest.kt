@@ -1,6 +1,6 @@
 package cz.bedla.revolut.service.impl
 
-import cz.bedla.revolut.Database
+import cz.bedla.revolut.DatabaseImpl
 import cz.bedla.revolut.DbInitializer
 import cz.bedla.revolut.domain.Account
 import cz.bedla.revolut.domain.AccountType
@@ -19,11 +19,11 @@ import java.time.OffsetDateTime
 class AccountDaoImplTest {
     private lateinit var fixture: AccountDaoImpl
 
-    private lateinit var database: Database
+    private lateinit var database: DatabaseImpl
 
     @BeforeEach
     fun setUp(@TempDirectory.TempDir tempDir: Path) {
-        database = Database(tempDir.toFile())
+        database = DatabaseImpl(tempDir.toFile())
         database.start()
         DbInitializer("database.sql", database.dataSource).run()
 
@@ -34,7 +34,8 @@ class AccountDaoImplTest {
     fun storeAndFetch() {
         TransactionalImpl(database.dataSource).run {
             val account = fixture.createAccount(
-                    Account(AccountType.PERSONAL, "foo", OffsetDateTime.now(), 123.4.toBigDecimal()))
+                Account(AccountType.PERSONAL, "foo", OffsetDateTime.now(), 123.4.toBigDecimal())
+            )
             assertThat(account.id).isGreaterThan(0)
             assertThat(account.version).isEqualTo(1)
 
@@ -51,7 +52,8 @@ class AccountDaoImplTest {
     fun updateBalance() {
         TransactionalImpl(database.dataSource).run {
             val account = fixture.createAccount(
-                    Account(AccountType.PERSONAL, "lock", OffsetDateTime.now(), 123.4.toBigDecimal()))
+                Account(AccountType.PERSONAL, "lock", OffsetDateTime.now(), 123.4.toBigDecimal())
+            )
 
             fixture.updateBalance(account.copy(balance = 999.toBigDecimal()))
 
@@ -65,9 +67,11 @@ class AccountDaoImplTest {
     fun findAll() {
         TransactionalImpl(database.dataSource).run {
             fixture.createAccount(
-                    Account(AccountType.PERSONAL, "Afoo", OffsetDateTime.now(), 123.toBigDecimal()))
+                Account(AccountType.PERSONAL, "Afoo", OffsetDateTime.now(), 123.toBigDecimal())
+            )
             fixture.createAccount(
-                    Account(AccountType.TOP_UP, "Bbar", OffsetDateTime.now(), 456.toBigDecimal()))
+                Account(AccountType.TOP_UP, "Bbar", OffsetDateTime.now(), 456.toBigDecimal())
+            )
 
             val list = fixture.findAccounts()
             assertThat(list).hasSize(2)
@@ -86,11 +90,14 @@ class AccountDaoImplTest {
     fun findByType() {
         TransactionalImpl(database.dataSource).run {
             fixture.createAccount(
-                    Account(AccountType.PERSONAL, "Afoo", OffsetDateTime.now(), 123.toBigDecimal()))
+                Account(AccountType.PERSONAL, "Afoo", OffsetDateTime.now(), 123.toBigDecimal())
+            )
             fixture.createAccount(
-                    Account(AccountType.TOP_UP, "Bbar", OffsetDateTime.now(), 456.toBigDecimal()))
+                Account(AccountType.TOP_UP, "Bbar", OffsetDateTime.now(), 456.toBigDecimal())
+            )
             fixture.createAccount(
-                    Account(AccountType.TOP_UP, "Cbar", OffsetDateTime.now(), 789.toBigDecimal()))
+                Account(AccountType.TOP_UP, "Cbar", OffsetDateTime.now(), 789.toBigDecimal())
+            )
 
             val personal = fixture.findAccountsOfType(AccountType.PERSONAL)
             val topUp = fixture.findAccountsOfType(AccountType.TOP_UP)
