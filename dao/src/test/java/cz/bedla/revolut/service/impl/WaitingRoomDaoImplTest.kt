@@ -1,13 +1,13 @@
-package cz.bedla.revolut.dao.impl
+package cz.bedla.revolut.service.impl
 
 import cz.bedla.revolut.Database
 import cz.bedla.revolut.DbInitializer
-import cz.bedla.revolut.dao.AccountDao
+import cz.bedla.revolut.service.AccountDao
 import cz.bedla.revolut.domain.Account
 import cz.bedla.revolut.domain.AccountType
 import cz.bedla.revolut.domain.WaitingRoom
 import cz.bedla.revolut.domain.WaitingRoomState
-import cz.bedla.revolut.tx.Transactional
+import cz.bedla.revolut.tx.TransactionalImpl
 import org.assertj.core.api.Assertions.*
 import org.jooq.exception.DataAccessException
 import org.jooq.exception.DataChangedException
@@ -38,7 +38,7 @@ class WaitingRoomDaoImplTest {
 
     @Test
     fun storeAndFind() {
-        Transactional(database.dataSource).run {
+        TransactionalImpl(database.dataSource).run {
             val waitingRoom = createWaitingRoom()
             assertThat(waitingRoom.id).isGreaterThan(0)
             assertThat(waitingRoom.version).isEqualTo(1)
@@ -56,7 +56,7 @@ class WaitingRoomDaoImplTest {
 
     @Test
     fun storeIncorrectRelation() {
-        Transactional(database.dataSource).run {
+        TransactionalImpl(database.dataSource).run {
             val invalidFrom = Account(AccountType.PERSONAL, "Mr. Foo", OffsetDateTime.now(), 0.toBigDecimal())
             val invalidTo = Account(AccountType.PERSONAL, "Mr. Bar", OffsetDateTime.now(), 0.toBigDecimal())
 
@@ -69,7 +69,7 @@ class WaitingRoomDaoImplTest {
 
     @Test
     fun findItemsWithState() {
-        Transactional(database.dataSource).run {
+        TransactionalImpl(database.dataSource).run {
             val fromAccount = accountDao.createAccount(
                     Account(AccountType.TOP_UP, "bank top-up", OffsetDateTime.now(), 999999.toBigDecimal()))
             val toAccount = accountDao.createAccount(
@@ -94,8 +94,28 @@ class WaitingRoomDaoImplTest {
     }
 
     @Test
+    fun findItemsForAccount() {
+        TransactionalImpl(database.dataSource).run {
+            val account1 = accountDao.createAccount(
+                    Account(AccountType.TOP_UP, "bank top-up", OffsetDateTime.now(), 999999.toBigDecimal()))
+            val account2 = accountDao.createAccount(
+                    Account(AccountType.PERSONAL, "Mr. Foo", OffsetDateTime.now(), 0.toBigDecimal()))
+            val account3 = accountDao.createAccount(
+                    Account(AccountType.PERSONAL, "Mr. Bar", OffsetDateTime.now(), 0.toBigDecimal()))
+
+            fixture.create(WaitingRoom(account1, account2, 1.toBigDecimal(), WaitingRoomState.RECEIVED, OffsetDateTime.now().minusDays(2)))
+            fixture.create(WaitingRoom(account1, account3, 2.toBigDecimal(), WaitingRoomState.RECEIVED, OffsetDateTime.now().minusDays(1)))
+
+            val list = fixture.findItemsForAccount(account1)
+            assertThat(list).hasSize(2)
+            assertThat(list[0].amount).isEqualTo(1.toBigDecimal())
+            assertThat(list[1].amount).isEqualTo(2.toBigDecimal())
+        }
+    }
+
+    @Test
     fun updateState() {
-        Transactional(database.dataSource).run {
+        TransactionalImpl(database.dataSource).run {
             val waitingRoom = createWaitingRoom()
 
             fixture.updateState(waitingRoom.copy(state = WaitingRoomState.NO_FUNDS))
@@ -108,7 +128,7 @@ class WaitingRoomDaoImplTest {
 
     @Test
     fun updateStateInvalidOptimisticLock() {
-        Transactional(database.dataSource).run {
+        TransactionalImpl(database.dataSource).run {
             val waitingRoom = createWaitingRoom()
 
             assertThatThrownBy {
@@ -120,7 +140,7 @@ class WaitingRoomDaoImplTest {
 
     @Test
     fun delete() {
-        Transactional(database.dataSource).run {
+        TransactionalImpl(database.dataSource).run {
             val waitingRoom = createWaitingRoom()
 
             fixture.delete(waitingRoom)
@@ -132,7 +152,7 @@ class WaitingRoomDaoImplTest {
 
     @Test
     fun deleteWithOptimisticLock() {
-        Transactional(database.dataSource).run {
+        TransactionalImpl(database.dataSource).run {
             val waitingRoom = createWaitingRoom()
 
             assertThatThrownBy {
@@ -144,7 +164,7 @@ class WaitingRoomDaoImplTest {
 
     @Test
     fun deleteNotFound() {
-        Transactional(database.dataSource).run {
+        TransactionalImpl(database.dataSource).run {
             val waitingRoom = createWaitingRoom()
 
             assertThatThrownBy {

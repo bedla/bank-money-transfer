@@ -1,10 +1,10 @@
-package cz.bedla.revolut.dao.impl
+package cz.bedla.revolut.service.impl
 
 import cz.bedla.revolut.Database
 import cz.bedla.revolut.DbInitializer
 import cz.bedla.revolut.domain.Account
 import cz.bedla.revolut.domain.AccountType
-import cz.bedla.revolut.tx.Transactional
+import cz.bedla.revolut.tx.TransactionalImpl
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
@@ -32,7 +32,7 @@ class AccountDaoImplTest {
 
     @Test
     fun storeAndFetch() {
-        Transactional(database.dataSource).run {
+        TransactionalImpl(database.dataSource).run {
             val account = fixture.createAccount(
                     Account(AccountType.PERSONAL, "foo", OffsetDateTime.now(), 123.4.toBigDecimal()))
             assertThat(account.id).isGreaterThan(0)
@@ -49,7 +49,7 @@ class AccountDaoImplTest {
 
     @Test
     fun updateBalance() {
-        Transactional(database.dataSource).run {
+        TransactionalImpl(database.dataSource).run {
             val account = fixture.createAccount(
                     Account(AccountType.PERSONAL, "lock", OffsetDateTime.now(), 123.4.toBigDecimal()))
 
@@ -63,7 +63,7 @@ class AccountDaoImplTest {
 
     @Test
     fun findAll() {
-        Transactional(database.dataSource).run {
+        TransactionalImpl(database.dataSource).run {
             fixture.createAccount(
                     Account(AccountType.PERSONAL, "Afoo", OffsetDateTime.now(), 123.toBigDecimal()))
             fixture.createAccount(
@@ -79,6 +79,27 @@ class AccountDaoImplTest {
             assertThat(list[1].type).isEqualTo(AccountType.TOP_UP)
             assertThat(list[1].name).isEqualTo("Bbar")
             assertThat(list[1].balance).isEqualTo(456.toBigDecimal())
+        }
+    }
+
+    @Test
+    fun findByType() {
+        TransactionalImpl(database.dataSource).run {
+            fixture.createAccount(
+                    Account(AccountType.PERSONAL, "Afoo", OffsetDateTime.now(), 123.toBigDecimal()))
+            fixture.createAccount(
+                    Account(AccountType.TOP_UP, "Bbar", OffsetDateTime.now(), 456.toBigDecimal()))
+            fixture.createAccount(
+                    Account(AccountType.TOP_UP, "Cbar", OffsetDateTime.now(), 789.toBigDecimal()))
+
+            val personal = fixture.findAccountsOfType(AccountType.PERSONAL)
+            val topUp = fixture.findAccountsOfType(AccountType.TOP_UP)
+            val withdrawal = fixture.findAccountsOfType(AccountType.WITHDRAWAL)
+            assertThat(personal).hasSize(1)
+            assertThat(topUp).hasSize(2)
+            assertThat(topUp[0].name).isEqualTo("Bbar")
+            assertThat(topUp[1].name).isEqualTo("Cbar")
+            assertThat(withdrawal).isEmpty()
         }
     }
 

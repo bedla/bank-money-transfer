@@ -1,14 +1,13 @@
-package cz.bedla.revolut.dao.impl
+package cz.bedla.revolut.service.impl
 
 import cz.bedla.revolut.Database
 import cz.bedla.revolut.DbInitializer
-import cz.bedla.revolut.dao.AccountDao
+import cz.bedla.revolut.service.AccountDao
 import cz.bedla.revolut.domain.Account
 import cz.bedla.revolut.domain.AccountType
 import cz.bedla.revolut.domain.Transaction
-import cz.bedla.revolut.tx.Transactional
+import cz.bedla.revolut.tx.TransactionalImpl
 import org.assertj.core.api.Assertions.assertThat
-import org.assertj.core.api.Assertions.fail
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -36,7 +35,7 @@ class TransactionDaoImlTest {
 
     @Test
     fun store() {
-        Transactional(database.dataSource).run {
+        TransactionalImpl(database.dataSource).run {
             val fromAccount = accountDao.createAccount(
                     Account(AccountType.TOP_UP, "bank top-up", OffsetDateTime.now(), 999999.toBigDecimal()))
             val toAccount = accountDao.createAccount(
@@ -45,7 +44,7 @@ class TransactionDaoImlTest {
             val transaction = fixture.create(Transaction(fromAccount, toAccount, 100.toBigDecimal(), OffsetDateTime.now()))
             assertThat(transaction.id).isGreaterThan(0)
 
-            val list = fixture.findAccountTransactions(fromAccount) ?: fail("not found")
+            val list = fixture.findAccountTransactions(fromAccount)
             assertThat(list).hasSize(1)
             assertThat(list[0].id).isEqualTo(transaction.id)
             assertThat(list[0].fromAccount.name).isEqualTo("bank top-up");
@@ -57,7 +56,7 @@ class TransactionDaoImlTest {
 
     @Test
     fun calculateBalance() {
-        Transactional(database.dataSource).run {
+        TransactionalImpl(database.dataSource).run {
             val mainAccount = accountDao.createAccount(
                     Account(AccountType.PERSONAL, "Mr. Foo", OffsetDateTime.now(), 0.toBigDecimal()))
 
@@ -78,7 +77,7 @@ class TransactionDaoImlTest {
 
     @Test
     fun findAccountTransactions() {
-        Transactional(database.dataSource).run {
+        TransactionalImpl(database.dataSource).run {
             val mainAccount = accountDao.createAccount(
                     Account(AccountType.PERSONAL, "Mr. Foo", OffsetDateTime.now(), 0.toBigDecimal()))
             val anotherAccount = accountDao.createAccount(

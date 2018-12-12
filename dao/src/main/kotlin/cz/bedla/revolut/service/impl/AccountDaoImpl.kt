@@ -1,7 +1,7 @@
-package cz.bedla.revolut.dao.impl
+package cz.bedla.revolut.service.impl
 
-import cz.bedla.revolut.dao.AccountDao
-import cz.bedla.revolut.dao.createDsl
+import cz.bedla.revolut.service.AccountDao
+import cz.bedla.revolut.service.createDsl
 import cz.bedla.revolut.domain.Account
 import cz.bedla.revolut.domain.AccountType
 import cz.bedla.revolut.jooq.tables.Account.ACCOUNT
@@ -36,15 +36,20 @@ class AccountDaoImpl() : AccountDao {
     override fun findAccount(id: Int): Account? {
         val dsl = createDsl()
         val record = dsl.selectFrom(ACCOUNT).where(ACCOUNT.ID.eq(id)).fetchOne()
-        return when (record) {
-            null -> null
-            else -> record.toAccount()
-        }
+        return record?.toAccount()
     }
 
     override fun findAccounts(): List<Account> {
         val dsl = createDsl()
         val result = dsl.selectFrom(ACCOUNT).orderBy(ACCOUNT.NAME).fetch()
+        return result.map { it.toAccount() }
+    }
+
+    override fun findAccountsOfType(type: AccountType): List<Account> {
+        val dsl = createDsl()
+        val result = dsl.selectFrom(ACCOUNT)
+                .where(ACCOUNT.TYPE.eq(type.name))
+                .orderBy(ACCOUNT.NAME).fetch()
         return result.map { it.toAccount() }
     }
 

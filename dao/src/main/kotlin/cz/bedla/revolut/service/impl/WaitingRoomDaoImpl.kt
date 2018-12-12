@@ -1,12 +1,13 @@
-package cz.bedla.revolut.dao.impl
+package cz.bedla.revolut.service.impl
 
-import cz.bedla.revolut.dao.AccountDao
-import cz.bedla.revolut.dao.WaitingRoomDao
-import cz.bedla.revolut.dao.createDsl
+import cz.bedla.revolut.domain.Account
 import cz.bedla.revolut.domain.WaitingRoom
 import cz.bedla.revolut.domain.WaitingRoomState
 import cz.bedla.revolut.jooq.Tables.WAITING_ROOM
 import cz.bedla.revolut.jooq.tables.records.WaitingRoomRecord
+import cz.bedla.revolut.service.AccountDao
+import cz.bedla.revolut.service.WaitingRoomDao
+import cz.bedla.revolut.service.createDsl
 import org.jooq.exception.DataChangedException
 
 class WaitingRoomDaoImpl(private val accountDao: AccountDao) : WaitingRoomDao {
@@ -30,10 +31,7 @@ class WaitingRoomDaoImpl(private val accountDao: AccountDao) : WaitingRoomDao {
     override fun findWaitingRoom(id: Int): WaitingRoom? {
         val dsl = createDsl()
         val record = dsl.selectFrom(WAITING_ROOM).where(WAITING_ROOM.ID.eq(id)).fetchOne()
-        return when (record) {
-            null -> null
-            else -> record.toWaitingRoom(accountDao)
-        }
+        return record?.toWaitingRoom(accountDao)
     }
 
     override fun delete(item: WaitingRoom) {
@@ -50,10 +48,20 @@ class WaitingRoomDaoImpl(private val accountDao: AccountDao) : WaitingRoomDao {
     override fun findItemsWithState(state: WaitingRoomState): List<WaitingRoom> {
         val dsl = createDsl()
         return dsl.selectFrom(WAITING_ROOM)
-                .where(WAITING_ROOM.STATE.eq(state.name))
-                .orderBy(WAITING_ROOM.DATE_CREATED)
-                .fetch()
-                .map { it.toWaitingRoom(accountDao) }
+            .where(WAITING_ROOM.STATE.eq(state.name))
+            .orderBy(WAITING_ROOM.DATE_CREATED)
+            .fetch()
+            .map { it.toWaitingRoom(accountDao) }
+    }
+
+    override fun findItemsForAccount(account: Account): List<WaitingRoom> {
+        val dsl = createDsl()
+        return dsl.selectFrom(WAITING_ROOM)
+            .where(WAITING_ROOM.FROM_ACC_ID.eq(account.id))
+            .or(WAITING_ROOM.TO_ACC_ID.eq(account.id))
+            .orderBy(WAITING_ROOM.DATE_CREATED)
+            .fetch()
+            .map { it.toWaitingRoom(accountDao) }
     }
 
     override fun updateState(waitingRoom: WaitingRoom) {
@@ -67,20 +75,21 @@ class WaitingRoomDaoImpl(private val accountDao: AccountDao) : WaitingRoomDao {
     // TODO solve N+1 problem
     private fun WaitingRoomRecord.toWaitingRoom(accountDao: AccountDao): WaitingRoom {
         val id = getValue(WAITING_ROOM.ID)!!
-        val fromAccountId = getValue(WAITING_ROOM.FROM_ACC_ID)!!
-        val toAccountId = getValue(WAITING_ROOM.TO_ACC_ID)!!
+        val fromAccountId: Int = getValue(WAITING_ROOM.FROM_ACC_ID)
+        val toAccountId: Int = getValue(WAITING_ROOM.TO_ACC_ID)
         val fromAccount = accountDao.findAccount(fromAccountId)
-                ?: throw IllegalStateException("Unable to find fromAccount.id=$fromAccountId for waitingRoom.id=$id")
+            ?: throw IllegalStateException("Unable to find fromAccount.id=$fromAccountId for waitingRoom.id=$id")
         val toAccount = accountDao.findAccount(toAccountId)
-                ?: throw IllegalStateException("Unable to find toAccount.id=$toAccountId for waitingRoom.id=$id")
+            ?: throw IllegalStateException("Unable to find toAccount.id=$toAccountId for waitingRoom.id=$id")
 
         return WaitingRoom(
-                fromAccount,
-                toAccount,
-                getValue(WAITING_ROOM.AMOUNT),
-                WaitingRoomState.valueOf(getValue(WAITING_ROOM.STATE)),
-                getValue(WAITING_ROOM.DATE_CREATED),
-                getValue(WAITING_ROOM.ID),
-                getValue(WAITING_ROOM.VERSION))
+            fromAccount,
+            toAccount,
+            getValue(WAITING_ROOM.AMOUNT),
+            WaitingRoomState.valueOf(getValue(WAITING_ROOM.STATE)),
+            getValue(WAITING_ROOM.DATE_CREATED),
+            getValue(WAITING_ROOM.ID),
+            getValue(WAITING_ROOM.VERSION)
+        )
     }
 }

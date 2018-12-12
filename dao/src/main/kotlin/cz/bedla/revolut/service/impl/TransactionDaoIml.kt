@@ -1,8 +1,8 @@
-package cz.bedla.revolut.dao.impl
+package cz.bedla.revolut.service.impl
 
-import cz.bedla.revolut.dao.AccountDao
-import cz.bedla.revolut.dao.TransactionDao
-import cz.bedla.revolut.dao.createDsl
+import cz.bedla.revolut.service.AccountDao
+import cz.bedla.revolut.service.TransactionDao
+import cz.bedla.revolut.service.createDsl
 import cz.bedla.revolut.domain.Account
 import cz.bedla.revolut.domain.Transaction
 import cz.bedla.revolut.jooq.Tables.TRANSACTION
@@ -33,11 +33,11 @@ class TransactionDaoIml(private val accountDao: AccountDao) : TransactionDao {
         val debit = dsl.select(sum(TRANSACTION.AMOUNT))
                 .from(TRANSACTION)
                 .where(TRANSACTION.FROM_ACC_ID.eq(account.id))
-                .fetchOneInto(BigDecimal::class.java) ?: 0.toBigDecimal()
+                .fetchOneInto(BigDecimal::class.java).orZero()
         val credit = dsl.select(sum(TRANSACTION.AMOUNT))
                 .from(TRANSACTION)
                 .where(TRANSACTION.TO_ACC_ID.eq(account.id))
-                .fetchOneInto(BigDecimal::class.java) ?: 0.toBigDecimal()
+                .fetchOneInto(BigDecimal::class.java).orZero()
 
         return credit - debit
     }
@@ -56,8 +56,8 @@ class TransactionDaoIml(private val accountDao: AccountDao) : TransactionDao {
     // TODO solve N+1 problem
     private fun TransactionRecord.toTransaction(accountDao: AccountDao): Transaction {
         val id = getValue(TRANSACTION.ID)!!
-        val fromAccountId = getValue(TRANSACTION.FROM_ACC_ID)!!
-        val toAccountId = getValue(TRANSACTION.TO_ACC_ID)!!
+        val fromAccountId: Int = getValue(TRANSACTION.FROM_ACC_ID)
+        val toAccountId: Int = getValue(TRANSACTION.TO_ACC_ID)
         val fromAccount = accountDao.findAccount(fromAccountId)
                 ?: throw IllegalStateException("Unable to find fromAccount.id=$fromAccountId for transaction.id=$id")
         val toAccount = accountDao.findAccount(toAccountId)
@@ -70,4 +70,6 @@ class TransactionDaoIml(private val accountDao: AccountDao) : TransactionDao {
                 getValue(TRANSACTION.DATE_TRANSACTED),
                 id)
     }
+
+    private fun BigDecimal?.orZero(): BigDecimal = this ?: BigDecimal.ZERO
 }

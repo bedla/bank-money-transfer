@@ -1,4 +1,4 @@
-package cz.bedla.revolut.dao
+package cz.bedla.revolut.service
 
 import cz.bedla.revolut.tx.Transactional
 import org.jooq.DSLContext
