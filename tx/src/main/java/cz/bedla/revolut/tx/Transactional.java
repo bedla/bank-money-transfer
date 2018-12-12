@@ -29,7 +29,7 @@ public final class Transactional {
     }
 
     public <T> T execute(TransactionExecuteCallback<T> action) {
-        validState(currentConnection() == null, "Unable to nest transactions");
+        validState(connectionThreadLocal.get() == null, "Unable to nest transactions");
 
         try (final Connection connection = obtainConnection()) {
             try {
@@ -91,6 +91,8 @@ public final class Transactional {
     }
 
     public static Connection currentConnection() {
-        return connectionThreadLocal.get();
+        final Connection connection = connectionThreadLocal.get();
+        validState(connection != null, "No transaction/connection bound to current thread");
+        return connection;
     }
 }
