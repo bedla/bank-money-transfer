@@ -87,6 +87,10 @@ class WaitingRoomServiceImpl(
         })
     }
 
+    override fun listWaitingRoomsToProcess(): List<WaitingRoom> = transactional.execute {
+        waitingRoomDao.findItemsWithState(WaitingRoomState.RECEIVED)
+    }
+
     private inline fun <T> Account.withdrawWithPersonalAccountOnly(block: (Account) -> T): T =
         withPersonalAccountOnly(block) {
             throw InvalidWithdrawalRequest(it.id)

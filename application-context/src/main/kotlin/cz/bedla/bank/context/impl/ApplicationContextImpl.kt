@@ -4,14 +4,8 @@ import cz.bedla.bank.Database
 import cz.bedla.bank.DatabaseImpl
 import cz.bedla.bank.DbInitializer
 import cz.bedla.bank.context.ApplicationContext
-import cz.bedla.bank.service.AccountDao
-import cz.bedla.bank.service.AccountService
-import cz.bedla.bank.service.WaitingRoomDao
-import cz.bedla.bank.service.WaitingRoomService
-import cz.bedla.bank.service.impl.AccountDaoImpl
-import cz.bedla.bank.service.impl.AccountServiceImpl
-import cz.bedla.bank.service.impl.WaitingRoomDaoImpl
-import cz.bedla.bank.service.impl.WaitingRoomServiceImpl
+import cz.bedla.bank.service.*
+import cz.bedla.bank.service.impl.*
 import cz.bedla.bank.tx.Transactional
 import cz.bedla.bank.tx.TransactionalImpl
 import org.slf4j.LoggerFactory
@@ -34,6 +28,10 @@ class ApplicationContextImpl(private val databaseFile: File) : ApplicationContex
         AccountDaoImpl()
     }
 
+    private val transactionDao = lazyBean {
+        TransactionDaoIml(accountDaoBean())
+    }
+
     private val accountService = lazyBean {
         AccountServiceImpl(accountDaoBean(), transactionalBean())
     }
@@ -46,17 +44,42 @@ class ApplicationContextImpl(private val databaseFile: File) : ApplicationContex
         DatabaseImpl(databaseFile)
     }
 
+    private val coordinator = lazyBean {
+        CoordinatorImpl(
+            Runtime.getRuntime().availableProcessors() * 2,
+            5,
+            waitingRoomServiceBean(),
+            transactorBean()
+        )
+    }
+
+    private val transactor = lazyBean {
+        TransactorImpl(
+            transactionDaoBean(),
+            waitingRoomDaoBean(),
+            accountDaoBean(),
+            waitingRoomServiceBean(),
+            transactionalBean()
+        )
+    }
+
     override fun waitingRoomServiceBean(): WaitingRoomService = waitingRoomService.value
 
     override fun waitingRoomDaoBean(): WaitingRoomDao = waitingRoomDao.value
 
     override fun accountDaoBean(): AccountDao = accountDao.value
 
+    override fun transactionDaoBean(): TransactionDao = transactionDao.value
+
     override fun accountServiceBean(): AccountService = accountService.value
 
     override fun transactionalBean(): Transactional = transactional.value
 
     override fun databaseBean(): Database = database.value
+
+    override fun coordinatorBean(): Coordinator = coordinator.value
+
+    override fun transactorBean(): Transactor = transactor.value
 
     override fun start() {
         databaseBean().start()
@@ -67,10 +90,16 @@ class ApplicationContextImpl(private val databaseFile: File) : ApplicationContex
             logger.info("DB not initialized, running init script...")
             dbInitializer.run()
         }
+
+        transactorBean().start()
+        coordinatorBean().start()
     }
 
     override fun stop() {
         databaseBean().stop()
+
+        transactorBean().stop()
+        coordinatorBean().stop()
     }
 
     private inline fun <reified T> lazyBean(noinline initializer: () -> T): Lazy<T> =

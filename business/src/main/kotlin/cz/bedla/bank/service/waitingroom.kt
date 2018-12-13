@@ -15,6 +15,8 @@ interface WaitingRoomService {
     fun waitingRoomState(id: Int): WaitingRoomState
 
     fun listWaitingRoomRequestsForPersonalAccounts(accountId: Int): List<WaitingRoom>
+
+    fun listWaitingRoomsToProcess(): List<WaitingRoom>
 }
 
 class WaitingRoomNotFound(waitingRoomId: Int) : RuntimeException("Unable to find waitingRoom.id=$waitingRoomId")

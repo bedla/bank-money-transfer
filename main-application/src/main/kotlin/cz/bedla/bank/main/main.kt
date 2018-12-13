@@ -10,7 +10,7 @@ import picocli.CommandLine
 import java.io.File
 
 @CommandLine.Command(
-    name = "Bank", version = ["0.0.0"],
+    name = "Bank", version = ["0.0.1"],
     mixinStandardHelpOptions = true
 )
 class BankApplication : Runnable {
@@ -24,13 +24,13 @@ class BankApplication : Runnable {
     private var port: Int = 8080
 
     override fun run() {
-        logger.info("Bank start")
+        logger.info("Bank starting")
         val servletContextListener = ApplicationServletContextListener(ApplicationContextImpl(dbFile))
         val server = RestServer(
             host, port, servletContextListener, RestApplication::class.java
         ).also { it.start() }
-        Runtime.getRuntime().addShutdownHook(Thread() {
-            logger.info("Bank shutdown")
+        Runtime.getRuntime().addShutdownHook(Thread {
+            logger.info("Bank shutting down")
             server.stop()
             servletContextListener.findApplicationContext().stop()
         })
