@@ -3,6 +3,7 @@ package cz.bedla.bank.service.impl
 import com.nhaarman.mockitokotlin2.*
 import cz.bedla.bank.domain.Account
 import cz.bedla.bank.domain.AccountType
+import cz.bedla.bank.domain.WaitingRoom
 import cz.bedla.bank.domain.WaitingRoomState
 import cz.bedla.bank.service.*
 import cz.bedla.bank.tx.TransactionExecuteCallback
@@ -277,6 +278,43 @@ class WaitingRoomServiceImplTest {
                 .hasMessage("Invalid list request for account.id=0")
         }
     }
+
+    @Nested
+    inner class `WaitingRoom state` {
+        @Test
+        fun `business`() {
+            val waitingRoomDao = mock<WaitingRoomDao> {
+                on { findWaitingRoom(eq(123)) } doReturn waitingRoom(WaitingRoomState.NO_FUNDS)
+            }
+
+            val fixture = WaitingRoomServiceImpl(waitingRoomDao, mock(), transactional)
+            assertThat(fixture.waitingRoomState(123)).isEqualTo(WaitingRoomState.NO_FUNDS)
+
+            verify(waitingRoomDao).findWaitingRoom(eq(123))
+            verifyNoMoreInteractions(waitingRoomDao)
+        }
+
+        @Test
+        fun `invalid ID`() {
+            val waitingRoomDao = mock<WaitingRoomDao> {
+                on { findWaitingRoom(eq(123)) } doReturn null
+            }
+
+            val fixture = WaitingRoomServiceImpl(waitingRoomDao, mock(), transactional)
+            assertThatThrownBy {
+                fixture.waitingRoomState(123)
+            }.isInstanceOf(WaitingRoomNotFound::class.java)
+                .hasMessage("Unable to find waitingRoom.id=123")
+        }
+    }
+
+    private fun waitingRoom(state: WaitingRoomState) = WaitingRoom(
+        account(AccountType.PERSONAL),
+        account(AccountType.PERSONAL),
+        0.toBigDecimal(),
+        state,
+        OffsetDateTime.now()
+    )
 
     private fun account(accountType: AccountType, name: String = "foo") =
         Account(accountType, name, OffsetDateTime.now(), 0.toBigDecimal())

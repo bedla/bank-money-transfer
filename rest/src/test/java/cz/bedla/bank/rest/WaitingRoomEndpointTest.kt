@@ -1,8 +1,6 @@
 package cz.bedla.bank.rest
 
-import com.nhaarman.mockitokotlin2.KStubbing
-import com.nhaarman.mockitokotlin2.doReturn
-import com.nhaarman.mockitokotlin2.eq
+import com.nhaarman.mockitokotlin2.*
 import cz.bedla.bank.RestServer
 import cz.bedla.bank.context.ApplicationContext
 import cz.bedla.bank.domain.Account
@@ -43,11 +41,83 @@ class WaitingRoomEndpointTest {
             .`when`()
             .contentType(ContentType.JSON)
             .body(mapOf("fromAccountId" to 123, "toAccountId" to 456, "amount" to 3.14))
-            .post("/api/waiting-room")
+            .post("/api/waiting-room/transfer")
             .then()
             .log().all()
             .statusCode(200)
             .body("waitingRoomId", equalTo(111))
+
+        verify(applicationContext.waitingRoomServiceBean())
+            .receivePaymentRequest(eq(123), eq(456), eq(3.14.toBigDecimal()))
+        verifyNoMoreInteractions(applicationContext.waitingRoomServiceBean())
+    }
+
+    @Test
+    fun topUp() {
+        mock(applicationContext.waitingRoomServiceBean()) {
+            on { topUpRequest(eq(123), eq(3.14.toBigDecimal())) } doReturn waitingRoom(111)
+        }
+
+        given()
+            .log().all()
+            .port(server.port)
+            .`when`()
+            .contentType(ContentType.JSON)
+            .body(mapOf("accountId" to 123, "amount" to 3.14))
+            .post("/api/waiting-room/top-up")
+            .then()
+            .log().all()
+            .statusCode(200)
+            .body("waitingRoomId", equalTo(111))
+
+        verify(applicationContext.waitingRoomServiceBean())
+            .topUpRequest(eq(123), eq(3.14.toBigDecimal()))
+        verifyNoMoreInteractions(applicationContext.waitingRoomServiceBean())
+    }
+
+    @Test
+    fun withdrawal() {
+        mock(applicationContext.waitingRoomServiceBean()) {
+            on { withdrawalRequest(eq(123), eq(3.14.toBigDecimal())) } doReturn waitingRoom(111)
+        }
+
+        given()
+            .log().all()
+            .port(server.port)
+            .`when`()
+            .contentType(ContentType.JSON)
+            .body(mapOf("accountId" to 123, "amount" to 3.14))
+            .post("/api/waiting-room/withdrawal")
+            .then()
+            .log().all()
+            .statusCode(200)
+            .body("waitingRoomId", equalTo(111))
+
+        verify(applicationContext.waitingRoomServiceBean())
+            .withdrawalRequest(eq(123), eq(3.14.toBigDecimal()))
+        verifyNoMoreInteractions(applicationContext.waitingRoomServiceBean())
+    }
+
+    @Test
+    fun state() {
+        mock(applicationContext.waitingRoomServiceBean()) {
+            on { waitingRoomState(eq(123)) } doReturn WaitingRoomState.NO_FUNDS
+        }
+
+        given()
+            .log().all()
+            .port(server.port)
+            .`when`()
+            .contentType(ContentType.JSON)
+            .get("/api/waiting-room/123/state")
+            .then()
+            .log().all()
+            .statusCode(200)
+            .body("state", equalTo("NO_FUNDS"))
+
+        verify(applicationContext.waitingRoomServiceBean())
+            .waitingRoomState(eq(123))
+        verifyNoMoreInteractions(applicationContext.waitingRoomServiceBean())
     }
 
     private fun <T> mock(mock: T, stubbing: KStubbing<T>.(T) -> Unit) {
