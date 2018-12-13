@@ -5,7 +5,7 @@ import cz.bedla.bank.RestServer
 import cz.bedla.bank.context.ApplicationContext
 import cz.bedla.bank.domain.Account
 import cz.bedla.bank.domain.AccountType
-import io.restassured.RestAssured
+import io.restassured.RestAssured.given
 import io.restassured.http.ContentType
 import org.hamcrest.Matchers.equalTo
 import org.junit.jupiter.api.AfterEach
@@ -36,7 +36,7 @@ class AccountEndpointTest {
             }
         }
 
-        RestAssured.given()
+        given()
             .log().all()
             .port(server.port)
             .`when`()
@@ -60,7 +60,7 @@ class AccountEndpointTest {
             )
         }
 
-        RestAssured.given()
+        given()
             .log().all()
             .port(server.port)
             .`when`()

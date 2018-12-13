@@ -28,17 +28,19 @@ class AccountServiceImpl(
         accountDao.createAccount(Account(AccountType.WITHDRAWAL, name, OffsetDateTime.now(), amount))
     }
 
-    override fun findAccount(id: Int): Account = accountDao.findAccount(id) ?: throw AccountNotFound(id)
-
-    override fun findTopUpAccount(): Account {
-        val list = accountDao.findAccountsOfType(AccountType.TOP_UP)
-        check(list.isNotEmpty()) { "Unable to find any top-up account" }
-        return list.sortedBy { it.balance }.first()
+    override fun findAccount(id: Int): Account = transactional.execute {
+        accountDao.findAccount(id) ?: throw AccountNotFound(id)
     }
 
-    override fun findWithdrawalAccount(): Account {
+    override fun findTopUpAccount(): Account = transactional.execute {
+        val list = accountDao.findAccountsOfType(AccountType.TOP_UP)
+        check(list.isNotEmpty()) { "Unable to find any top-up account" }
+        list.sortedBy { it.balance }.first()
+    }
+
+    override fun findWithdrawalAccount(): Account = transactional.execute {
         val list = accountDao.findAccountsOfType(AccountType.WITHDRAWAL)
         check(list.isNotEmpty()) { "Unable to find any withdrawal account" }
-        return list.sortedByDescending { it.balance }.first()
+        list.sortedByDescending { it.balance }.first()
     }
 }

@@ -74,8 +74,9 @@ class WaitingRoomServiceImpl(
         }
     }
 
-    override fun waitingRoomState(id: Int): WaitingRoomState =
+    override fun waitingRoomState(id: Int): WaitingRoomState = transactional.execute {
         (waitingRoomDao.findWaitingRoom(id) ?: throw WaitingRoomNotFound(id)).state
+    }
 
     override fun listWaitingRoomRequestsForPersonalAccounts(accountId: Int): List<WaitingRoom> = transactional.execute {
         val account = accountService.findAccount(accountId)

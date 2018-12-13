@@ -14,6 +14,7 @@ interface ApplicationContext {
     fun databaseBean(): Database
     fun coordinatorBean(): Coordinator
     fun transactorBean(): Transactor
+    fun bankInitializerBean(): BankInitializer
 
     fun start()
     fun stop()

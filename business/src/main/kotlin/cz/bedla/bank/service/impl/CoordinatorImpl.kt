@@ -13,6 +13,7 @@ import java.util.concurrent.TimeUnit
 
 class CoordinatorImpl(
     numWorkers: Int,
+    private val initDelaySeconds: Int,
     private val periodSeconds: Int,
     private val waitingRoomService: WaitingRoomService,
     private val transactor: Transactor,
@@ -22,7 +23,7 @@ class CoordinatorImpl(
 
     override fun start() {
         logger.info("Coordinator starting")
-        poller.scheduleAtFixedRate(createPoller(), 5, periodSeconds.toLong(), TimeUnit.SECONDS)
+        poller.scheduleAtFixedRate(createPoller(), initDelaySeconds.toLong(), periodSeconds.toLong(), TimeUnit.SECONDS)
     }
 
     private fun createPoller(): WaitingRoomPoller {

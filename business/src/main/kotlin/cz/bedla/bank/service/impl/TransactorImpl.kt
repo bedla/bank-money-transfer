@@ -27,7 +27,7 @@ class TransactorImpl(
         }
 
         if (waitingRoomService.waitingRoomState(waitingRoom.id) != WaitingRoomState.RECEIVED) {
-            logger.info("WaitingRoom.id=${waitingRoom.id} - already processed, skipping.")
+            logger.info("WaitingRoom.id=${waitingRoom.id} - already processed (heavy-load?), skipping.")
             return
         }
 

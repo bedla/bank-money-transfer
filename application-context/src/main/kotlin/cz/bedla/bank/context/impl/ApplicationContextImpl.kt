@@ -11,7 +11,11 @@ import cz.bedla.bank.tx.TransactionalImpl
 import org.slf4j.LoggerFactory
 import java.io.File
 
-class ApplicationContextImpl(private val databaseFile: File) : ApplicationContext {
+class ApplicationContextImpl(
+    private val databaseFile: File,
+    private val coordinatorInitDelaySeconds: Int = 5,
+    private val coordinatorPeriodSeconds: Int = 5
+) : ApplicationContext {
     private val waitingRoomService = lazyBean {
         WaitingRoomServiceImpl(
             waitingRoomDaoBean(),
@@ -29,7 +33,7 @@ class ApplicationContextImpl(private val databaseFile: File) : ApplicationContex
     }
 
     private val transactionDao = lazyBean {
-        TransactionDaoIml(accountDaoBean())
+        TransactionDaoIml(accountDaoBean(), waitingRoomDaoBean())
     }
 
     private val accountService = lazyBean {
@@ -47,7 +51,8 @@ class ApplicationContextImpl(private val databaseFile: File) : ApplicationContex
     private val coordinator = lazyBean {
         CoordinatorImpl(
             Runtime.getRuntime().availableProcessors() * 2,
-            5,
+            coordinatorInitDelaySeconds,
+            coordinatorPeriodSeconds,
             waitingRoomServiceBean(),
             transactorBean()
         )
@@ -61,6 +66,10 @@ class ApplicationContextImpl(private val databaseFile: File) : ApplicationContex
             waitingRoomServiceBean(),
             transactionalBean()
         )
+    }
+
+    private val bankInitializer = lazyBean {
+        BankInitializerImpl(accountServiceBean())
     }
 
     override fun waitingRoomServiceBean(): WaitingRoomService = waitingRoomService.value
@@ -81,7 +90,10 @@ class ApplicationContextImpl(private val databaseFile: File) : ApplicationContex
 
     override fun transactorBean(): Transactor = transactor.value
 
+    override fun bankInitializerBean(): BankInitializer = bankInitializer.value
+
     override fun start() {
+        logger.info("Application context is starting")
         databaseBean().start()
         val dbInitializer = DbInitializer("database.sql", databaseBean().dataSource)
         if (dbInitializer.checkDbInitialized()) {
@@ -91,11 +103,15 @@ class ApplicationContextImpl(private val databaseFile: File) : ApplicationContex
             dbInitializer.run()
         }
 
+        bankInitializerBean().init()
+
         transactorBean().start()
         coordinatorBean().start()
     }
 
     override fun stop() {
+        logger.info("Application context is stopping")
+
         databaseBean().stop()
 
         transactorBean().stop()

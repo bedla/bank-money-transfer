@@ -26,6 +26,8 @@ internal class MockApplicationContext : ApplicationContext {
 
     private val transactor = mock(Transactor::class.java)
 
+    private val bankInitializer = mock(BankInitializer::class.java)
+
     override fun waitingRoomServiceBean(): WaitingRoomService = waitingRoomService
 
     override fun waitingRoomDaoBean(): WaitingRoomDao = waitingRoomDao
@@ -43,6 +45,8 @@ internal class MockApplicationContext : ApplicationContext {
     override fun coordinatorBean(): Coordinator = coordinator
 
     override fun transactorBean(): Transactor = transactor
+
+    override fun bankInitializerBean(): BankInitializer = bankInitializer
 
     override fun start() {
     }

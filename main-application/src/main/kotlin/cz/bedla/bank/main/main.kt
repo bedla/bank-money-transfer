@@ -32,7 +32,6 @@ class BankApplication : Runnable {
         Runtime.getRuntime().addShutdownHook(Thread {
             logger.info("Bank shutting down")
             server.stop()
-            servletContextListener.findApplicationContext().stop()
         })
     }
 
