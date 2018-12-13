@@ -7,7 +7,6 @@ import java.sql.Connection;
 import java.sql.SQLException;
 
 import static org.apache.commons.lang3.Validate.notNull;
-import static org.apache.commons.lang3.Validate.validState;
 
 /**
  * Inspired by Spring TransactionTemplate
@@ -29,8 +28,14 @@ public final class TransactionalImpl implements Transactional {
 
     @Override
     public <T> T execute(TransactionExecuteCallback<T> action) {
-        validState(ConnectionHolder.getConnection() == null, "Unable to nest transactions");
+        if (ConnectionHolder.getConnection() == null) {
+            return doInNewTransaction(action);
+        } else {
+            return action.doInTransaction();
+        }
+    }
 
+    private <T> T doInNewTransaction(TransactionExecuteCallback<T> action) {
         try (final Connection connection = obtainConnection()) {
             try {
                 ConnectionHolder.setConnection(connection);
