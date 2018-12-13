@@ -5,9 +5,11 @@ import cz.bedla.bank.DatabaseImpl
 import cz.bedla.bank.DbInitializer
 import cz.bedla.bank.context.ApplicationContext
 import cz.bedla.bank.service.AccountDao
+import cz.bedla.bank.service.AccountService
 import cz.bedla.bank.service.WaitingRoomDao
 import cz.bedla.bank.service.WaitingRoomService
 import cz.bedla.bank.service.impl.AccountDaoImpl
+import cz.bedla.bank.service.impl.AccountServiceImpl
 import cz.bedla.bank.service.impl.WaitingRoomDaoImpl
 import cz.bedla.bank.service.impl.WaitingRoomServiceImpl
 import cz.bedla.bank.tx.Transactional
@@ -19,7 +21,7 @@ class ApplicationContextImpl(private val databaseFile: File) : ApplicationContex
     private val waitingRoomService = lazyBean {
         WaitingRoomServiceImpl(
             waitingRoomDaoBean(),
-            accountDaoBean(),
+            accountServiceBean(),
             transactionalBean()
         )
     }
@@ -30,6 +32,10 @@ class ApplicationContextImpl(private val databaseFile: File) : ApplicationContex
 
     private val accountDao = lazyBean {
         AccountDaoImpl()
+    }
+
+    private val accountService = lazyBean {
+        AccountServiceImpl(accountDaoBean(), transactionalBean())
     }
 
     private val transactional = lazyBean {
@@ -45,6 +51,8 @@ class ApplicationContextImpl(private val databaseFile: File) : ApplicationContex
     override fun waitingRoomDaoBean(): WaitingRoomDao = waitingRoomDao.value
 
     override fun accountDaoBean(): AccountDao = accountDao.value
+
+    override fun accountServiceBean(): AccountService = accountService.value
 
     override fun transactionalBean(): Transactional = transactional.value
 

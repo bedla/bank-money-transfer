@@ -120,10 +120,6 @@ class WaitingRoomEndpointTest {
         verifyNoMoreInteractions(applicationContext.waitingRoomServiceBean())
     }
 
-    private fun <T> mock(mock: T, stubbing: KStubbing<T>.(T) -> Unit) {
-        return KStubbing(mock).stubbing(mock)
-    }
-
     private fun waitingRoom(id: Int): WaitingRoom =
         WaitingRoom(
             account(222),
@@ -140,7 +136,7 @@ class WaitingRoomEndpointTest {
     }
 
     @AfterEach
-    internal fun tearDown() {
+    fun tearDown() {
         server.stop()
     }
 }

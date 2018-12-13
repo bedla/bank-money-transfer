@@ -11,15 +11,15 @@ import java.time.OffsetDateTime
 
 class WaitingRoomServiceImpl(
     private val waitingRoomDao: WaitingRoomDao,
-    private val accountDao: AccountDao,
+    private val accountService: AccountService,
     private val transactional: Transactional
 ) : WaitingRoomService {
     override fun receivePaymentRequest(fromAccountId: Int, toAccountId: Int, amount: BigDecimal): WaitingRoom =
         transactional.execute {
             check(amount > 0.toBigDecimal()) { "Invalid amount value" }
 
-            val fromAccount = accountDao.findAccount(fromAccountId) ?: throw AccountNotFound(fromAccountId)
-            val toAccount = accountDao.findAccount(toAccountId) ?: throw AccountNotFound(toAccountId)
+            val fromAccount = accountService.findAccount(fromAccountId)
+            val toAccount = accountService.findAccount(toAccountId)
 
             if (fromAccount.type == AccountType.PERSONAL && toAccount.type == AccountType.PERSONAL) {
                 waitingRoomDao.create(
@@ -39,8 +39,8 @@ class WaitingRoomServiceImpl(
     override fun topUpRequest(toAccountId: Int, amount: BigDecimal): WaitingRoom = transactional.execute {
         check(amount > 0.toBigDecimal()) { "Invalid amount value" }
 
-        val account = accountDao.findAccount(toAccountId) ?: throw AccountNotFound(toAccountId)
-        val topUpAccount = topUpAccount()
+        val account = accountService.findAccount(toAccountId)
+        val topUpAccount = accountService.findTopUpAccount()
 
         account.topUpWithPersonalAccountOnly {
             waitingRoomDao.create(
@@ -58,8 +58,8 @@ class WaitingRoomServiceImpl(
     override fun withdrawalRequest(fromAccountId: Int, amount: BigDecimal): WaitingRoom = transactional.execute {
         check(amount > 0.toBigDecimal()) { "Invalid amount value" }
 
-        val account = accountDao.findAccount(fromAccountId) ?: throw AccountNotFound(fromAccountId)
-        val withdrawalAccount = withdrawalAccount()
+        val account = accountService.findAccount(fromAccountId)
+        val withdrawalAccount = accountService.findWithdrawalAccount()
 
         account.withdrawWithPersonalAccountOnly {
             waitingRoomDao.create(
@@ -78,7 +78,7 @@ class WaitingRoomServiceImpl(
         (waitingRoomDao.findWaitingRoom(id) ?: throw WaitingRoomNotFound(id)).state
 
     override fun listWaitingRoomRequestsForPersonalAccounts(accountId: Int): List<WaitingRoom> = transactional.execute {
-        val account = accountDao.findAccount(accountId) ?: throw AccountNotFound(accountId)
+        val account = accountService.findAccount(accountId)
 
         account.withPersonalAccountOnly({
             waitingRoomDao.findItemsForAccount(it)
@@ -103,18 +103,4 @@ class WaitingRoomServiceImpl(
         } else {
             elseBlock(this)
         }
-
-    private fun topUpAccount(): Account {
-        val list = accountDao.findAccountsOfType(AccountType.TOP_UP)
-        check(list.isNotEmpty()) { "Unable to find any top-up account" }
-        list.sortedBy { it.balance }
-        return list.first()
-    }
-
-    private fun withdrawalAccount(): Account {
-        val list = accountDao.findAccountsOfType(AccountType.WITHDRAWAL)
-        check(list.isNotEmpty()) { "Unable to find any withdrawal account" }
-        list.sortedByDescending { it.balance }
-        return list.first()
-    }
 }

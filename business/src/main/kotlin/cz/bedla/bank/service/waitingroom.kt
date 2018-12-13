@@ -17,8 +17,6 @@ interface WaitingRoomService {
     fun listWaitingRoomRequestsForPersonalAccounts(accountId: Int): List<WaitingRoom>
 }
 
-class AccountNotFound(accountId: Int) : RuntimeException("Unable to find account.id=$accountId")
-
 class WaitingRoomNotFound(waitingRoomId: Int) : RuntimeException("Unable to find waitingRoom.id=$waitingRoomId")
 
 class InvalidPaymentRequest(fromAccountId: Int, toAccountId: Int) :

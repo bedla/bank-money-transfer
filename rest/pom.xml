@@ -30,7 +30,14 @@
             <artifactId>jboss-servlet-api_4.0_spec</artifactId>
             <version>1.0.0.Final</version>
         </dependency>
-
+        <dependency>
+            <groupId>com.fasterxml.jackson.datatype</groupId>
+            <artifactId>jackson-datatype-jdk8</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.fasterxml.jackson.datatype</groupId>
+            <artifactId>jackson-datatype-jsr310</artifactId>
+        </dependency>
 
         <!--Test dependencies-->
         <dependency>
