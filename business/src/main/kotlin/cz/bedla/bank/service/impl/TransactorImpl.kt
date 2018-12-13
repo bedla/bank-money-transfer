@@ -31,12 +31,6 @@ class TransactorImpl(
             return
         }
 
-        if (isPersonalAccountWithoutFunds(waitingRoom)) {
-            logger.info("WaitingRoom.id=${waitingRoom.id} - from account.id=${waitingRoom.fromAccount.id} does not have enough funds.")
-            updateWaitingRoomNoFunds(waitingRoom)
-            return
-        }
-
         trySendMoney(waitingRoom)
     }
 
@@ -45,30 +39,26 @@ class TransactorImpl(
         return fromAccount.type == AccountType.PERSONAL && fromAccount.balance < waitingRoom.amount
     }
 
-    private fun trySendMoney(waitingRoom: WaitingRoom) {
-        transactional.run {
+    private fun trySendMoney(waitingRoom: WaitingRoom) = transactional.run {
+        if (isPersonalAccountWithoutFunds(waitingRoom)) {
+            logger.info("WaitingRoom.id=${waitingRoom.id} - from account.id=${waitingRoom.fromAccount.id} does not have enough funds.")
+            waitingRoomDao.updateState(waitingRoom.copy(state = WaitingRoomState.NO_FUNDS))
+        } else {
             val fromAccount = waitingRoom.fromAccount
             val toAccount = waitingRoom.toAccount
             logger.info("WaitingRoom.id=${waitingRoom.id} - sending money from account.id=${fromAccount.id} to account.id=${toAccount.id}")
 
             val transaction = transactionDao.create(
-                Transaction(fromAccount, toAccount, waitingRoom.amount, OffsetDateTime.now())
+                Transaction(waitingRoom, fromAccount, toAccount, waitingRoom.amount, OffsetDateTime.now())
             )
-            logger.info("WaitingRoom.id=${waitingRoom.id} - created transaction.id=${transaction.id}")
+            logger.info("WaitingRoom.id=${waitingRoom.id} - created transaction.wrId=${transaction.waitingRoom.id}")
 
             accountDao.updateBalance(fromAccount.copy(balance = fromAccount.balance - waitingRoom.amount))
-            accountDao.updateBalance(toAccount.copy(balance = fromAccount.balance + waitingRoom.amount))
+            accountDao.updateBalance(toAccount.copy(balance = toAccount.balance + waitingRoom.amount))
             logger.info("WaitingRoom.id=${waitingRoom.id} - balances updated with amount=${waitingRoom.amount}")
 
-            waitingRoomDao.updateState(waitingRoom.copy(state = WaitingRoomState.OK))
-
             logger.info("WaitingRoom.id=${waitingRoom.id} - state updated to ${WaitingRoomState.OK}, commit...")
-        }
-    }
-
-    private fun updateWaitingRoomNoFunds(waitingRoom: WaitingRoom) {
-        transactional.run {
-            waitingRoomDao.updateState(waitingRoom.copy(state = WaitingRoomState.NO_FUNDS))
+            waitingRoomDao.updateState(waitingRoom.copy(state = WaitingRoomState.OK))
         }
     }
 
