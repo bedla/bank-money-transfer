@@ -2,8 +2,8 @@ package cz.bedla.bank.service.impl
 
 import cz.bedla.bank.domain.PaymentOrder
 import cz.bedla.bank.service.Coordinator
-import cz.bedla.bank.service.Transactor
 import cz.bedla.bank.service.PaymentOrderService
+import cz.bedla.bank.service.Transactor
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import java.util.concurrent.ExecutorService
@@ -23,13 +23,14 @@ class CoordinatorImpl(
 
     override fun start() {
         logger.info("Coordinator starting")
-        poller.scheduleAtFixedRate(createPoller(), initDelaySeconds.toLong(), periodSeconds.toLong(), TimeUnit.SECONDS)
-    }
-
-    private fun createPoller(): PaymentOrderPoller {
-        return PaymentOrderPoller(paymentOrderService) { paymentOrder ->
-            workerExecutor.submit { transactor.process(paymentOrder) }
-        }
+        poller.scheduleAtFixedRate(
+            PaymentOrderPoller(paymentOrderService) { paymentOrder ->
+                workerExecutor.submit { transactor.process(paymentOrder) }
+            },
+            initDelaySeconds.toLong(),
+            periodSeconds.toLong(),
+            TimeUnit.SECONDS
+        )
     }
 
     override fun stop() {
@@ -51,7 +52,7 @@ class CoordinatorImpl(
         private val logger: Logger = LoggerFactory.getLogger(CoordinatorImpl::class.java)
     }
 
-    class PaymentOrderPoller(
+    private class PaymentOrderPoller(
         private val paymentOrderService: PaymentOrderService,
         private val processAction: (PaymentOrder) -> Unit
     ) : Runnable {
