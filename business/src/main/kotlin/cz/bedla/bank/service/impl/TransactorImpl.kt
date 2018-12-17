@@ -1,10 +1,12 @@
 package cz.bedla.bank.service.impl
 
 import cz.bedla.bank.domain.AccountType
-import cz.bedla.bank.domain.Transaction
 import cz.bedla.bank.domain.WaitingRoom
 import cz.bedla.bank.domain.WaitingRoomState
-import cz.bedla.bank.service.*
+import cz.bedla.bank.service.AccountDao
+import cz.bedla.bank.service.TransactionDao
+import cz.bedla.bank.service.Transactor
+import cz.bedla.bank.service.WaitingRoomDao
 import cz.bedla.bank.tx.Transactional
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
@@ -15,7 +17,6 @@ class TransactorImpl(
     private val transactionDao: TransactionDao,
     private val waitingRoomDao: WaitingRoomDao,
     private val accountDao: AccountDao,
-    private val waitingRoomService: WaitingRoomService,
     private val transactional: Transactional
 ) : Transactor {
     private val running = AtomicBoolean()
@@ -26,12 +27,18 @@ class TransactorImpl(
             return
         }
 
-        if (waitingRoomService.waitingRoomState(waitingRoom.id) != WaitingRoomState.RECEIVED) {
+        if (checkWaitingRoomReceived(waitingRoom)) {
             logger.info("WaitingRoom.id=${waitingRoom.id} - already processed (heavy-load?), skipping.")
             return
         }
 
         trySendMoney(waitingRoom)
+    }
+
+    private fun checkWaitingRoomReceived(waitingRoom: WaitingRoom) = transactional.execute {
+        (waitingRoomDao.findWaitingRoom(waitingRoom.id)
+            ?: error("Unable to find waitingRoom.id=${waitingRoom.id}"))
+            .state != WaitingRoomState.RECEIVED
     }
 
     private fun isPersonalAccountWithoutFunds(waitingRoom: WaitingRoom): Boolean {
@@ -49,7 +56,11 @@ class TransactorImpl(
             logger.info("WaitingRoom.id=${waitingRoom.id} - sending money from account.id=${fromAccount.id} to account.id=${toAccount.id}")
 
             val transaction = transactionDao.create(
-                Transaction(waitingRoom, fromAccount, toAccount, waitingRoom.amount, OffsetDateTime.now())
+                waitingRoom.id,
+                fromAccount.id,
+                toAccount.id,
+                waitingRoom.amount,
+                OffsetDateTime.now()
             )
             logger.info("WaitingRoom.id=${waitingRoom.id} - created transaction.wrId=${transaction.waitingRoom.id}")
 
