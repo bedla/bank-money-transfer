@@ -10,7 +10,7 @@ import org.glassfish.jersey.server.ResourceConfig
 
 class RestApplication : ResourceConfig() {
     init {
-        register(WaitingRoomEndpoint::class.java)
+        register(PaymentOrderEndpoint::class.java)
         register(AccountEndpoint::class.java)
         register(JacksonFeature::class.java)
 

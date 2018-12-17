@@ -1,12 +1,12 @@
 package cz.bedla.bank.service.impl
 
 import cz.bedla.bank.domain.AccountType
-import cz.bedla.bank.domain.WaitingRoom
-import cz.bedla.bank.domain.WaitingRoomState
+import cz.bedla.bank.domain.PaymentOrder
+import cz.bedla.bank.domain.PaymentOrderState
 import cz.bedla.bank.service.AccountDao
 import cz.bedla.bank.service.TransactionDao
 import cz.bedla.bank.service.Transactor
-import cz.bedla.bank.service.WaitingRoomDao
+import cz.bedla.bank.service.PaymentOrderDao
 import cz.bedla.bank.tx.Transactional
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
@@ -15,61 +15,61 @@ import java.util.concurrent.atomic.AtomicBoolean
 
 class TransactorImpl(
     private val transactionDao: TransactionDao,
-    private val waitingRoomDao: WaitingRoomDao,
+    private val paymentOrderDao: PaymentOrderDao,
     private val accountDao: AccountDao,
     private val transactional: Transactional
 ) : Transactor {
     private val running = AtomicBoolean()
 
-    override fun process(waitingRoom: WaitingRoom) {
+    override fun process(paymentOrder: PaymentOrder) {
         if (!running.get()) {
-            logger.info("WaitingRoom.id=${waitingRoom.id} - transactor not running, skipping.")
+            logger.info("PaymentOrder.id=${paymentOrder.id} - transactor not running, skipping.")
             return
         }
 
-        if (checkWaitingRoomReceived(waitingRoom)) {
-            logger.info("WaitingRoom.id=${waitingRoom.id} - already processed (heavy-load?), skipping.")
+        if (checkPaymentOrderReceived(paymentOrder)) {
+            logger.info("PaymentOrder.id=${paymentOrder.id} - already processed (heavy-load?), skipping.")
             return
         }
 
-        trySendMoney(waitingRoom)
+        trySendMoney(paymentOrder)
     }
 
-    private fun checkWaitingRoomReceived(waitingRoom: WaitingRoom) = transactional.execute {
-        (waitingRoomDao.findWaitingRoom(waitingRoom.id)
-            ?: error("Unable to find waitingRoom.id=${waitingRoom.id}"))
-            .state != WaitingRoomState.RECEIVED
+    private fun checkPaymentOrderReceived(paymentOrder: PaymentOrder) = transactional.execute {
+        (paymentOrderDao.findPaymentOrder(paymentOrder.id)
+            ?: error("Unable to find paymentOrder.id=${paymentOrder.id}"))
+            .state != PaymentOrderState.RECEIVED
     }
 
-    private fun isPersonalAccountWithoutFunds(waitingRoom: WaitingRoom): Boolean {
-        val fromAccount = waitingRoom.fromAccount
-        return fromAccount.type == AccountType.PERSONAL && fromAccount.balance < waitingRoom.amount
+    private fun isPersonalAccountWithoutFunds(paymentOrder: PaymentOrder): Boolean {
+        val fromAccount = paymentOrder.fromAccount
+        return fromAccount.type == AccountType.PERSONAL && fromAccount.balance < paymentOrder.amount
     }
 
-    private fun trySendMoney(waitingRoom: WaitingRoom) = transactional.run {
-        if (isPersonalAccountWithoutFunds(waitingRoom)) {
-            logger.info("WaitingRoom.id=${waitingRoom.id} - from account.id=${waitingRoom.fromAccount.id} does not have enough funds.")
-            waitingRoomDao.updateState(waitingRoom.copy(state = WaitingRoomState.NO_FUNDS))
+    private fun trySendMoney(paymentOrder: PaymentOrder) = transactional.run {
+        if (isPersonalAccountWithoutFunds(paymentOrder)) {
+            logger.info("PaymentOrder.id=${paymentOrder.id} - from account.id=${paymentOrder.fromAccount.id} does not have enough funds.")
+            paymentOrderDao.updateState(paymentOrder.copy(state = PaymentOrderState.NO_FUNDS))
         } else {
-            val fromAccount = waitingRoom.fromAccount
-            val toAccount = waitingRoom.toAccount
-            logger.info("WaitingRoom.id=${waitingRoom.id} - sending money from account.id=${fromAccount.id} to account.id=${toAccount.id}")
+            val fromAccount = paymentOrder.fromAccount
+            val toAccount = paymentOrder.toAccount
+            logger.info("PaymentOrder.id=${paymentOrder.id} - sending money from account.id=${fromAccount.id} to account.id=${toAccount.id}")
 
             val transaction = transactionDao.create(
-                waitingRoom.id,
+                paymentOrder.id,
                 fromAccount.id,
                 toAccount.id,
-                waitingRoom.amount,
+                paymentOrder.amount,
                 OffsetDateTime.now()
             )
-            logger.info("WaitingRoom.id=${waitingRoom.id} - created transaction.wrId=${transaction.waitingRoom.id}")
+            logger.info("PaymentOrder.id=${paymentOrder.id} - created transaction.wrId=${transaction.paymentOrder.id}")
 
-            accountDao.updateBalance(fromAccount.copy(balance = fromAccount.balance - waitingRoom.amount))
-            accountDao.updateBalance(toAccount.copy(balance = toAccount.balance + waitingRoom.amount))
-            logger.info("WaitingRoom.id=${waitingRoom.id} - balances updated with amount=${waitingRoom.amount}")
+            accountDao.updateBalance(fromAccount.copy(balance = fromAccount.balance - paymentOrder.amount))
+            accountDao.updateBalance(toAccount.copy(balance = toAccount.balance + paymentOrder.amount))
+            logger.info("PaymentOrder.id=${paymentOrder.id} - balances updated with amount=${paymentOrder.amount}")
 
-            logger.info("WaitingRoom.id=${waitingRoom.id} - state updated to ${WaitingRoomState.OK}, commit...")
-            waitingRoomDao.updateState(waitingRoom.copy(state = WaitingRoomState.OK))
+            logger.info("PaymentOrder.id=${paymentOrder.id} - state updated to ${PaymentOrderState.OK}, commit...")
+            paymentOrderDao.updateState(paymentOrder.copy(state = PaymentOrderState.OK))
         }
     }
 

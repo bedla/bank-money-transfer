@@ -1,25 +1,25 @@
 package cz.bedla.bank.service
 
-import cz.bedla.bank.domain.WaitingRoom
-import cz.bedla.bank.domain.WaitingRoomState
+import cz.bedla.bank.domain.PaymentOrder
+import cz.bedla.bank.domain.PaymentOrderState
 import java.math.BigDecimal
 
 
-interface WaitingRoomService {
-    fun receivePaymentRequest(fromAccountId: Int, toAccountId: Int, amount: BigDecimal): WaitingRoom
+interface PaymentOrderService {
+    fun receivePaymentRequest(fromAccountId: Int, toAccountId: Int, amount: BigDecimal): PaymentOrder
 
-    fun topUpRequest(toAccountId: Int, amount: BigDecimal): WaitingRoom
+    fun topUpRequest(toAccountId: Int, amount: BigDecimal): PaymentOrder
 
-    fun withdrawalRequest(fromAccountId: Int, amount: BigDecimal): WaitingRoom
+    fun withdrawalRequest(fromAccountId: Int, amount: BigDecimal): PaymentOrder
 
-    fun waitingRoomState(id: Int): WaitingRoomState
+    fun paymentOrderState(id: Int): PaymentOrderState
 
-    fun listWaitingRoomRequestsForPersonalAccounts(accountId: Int): List<WaitingRoom>
+    fun listItemsForPersonalAccounts(accountId: Int): List<PaymentOrder>
 
-    fun listWaitingRoomsToProcess(): List<WaitingRoom>
+    fun listItemsToProcess(): List<PaymentOrder>
 }
 
-class WaitingRoomNotFound(waitingRoomId: Int) : RuntimeException("Unable to find waitingRoom.id=$waitingRoomId")
+class PaymentOrderNotFound(paymentOrderId: Int) : RuntimeException("Unable to find paymentOrder.id=$paymentOrderId")
 
 class InvalidPaymentRequest(fromAccountId: Int, toAccountId: Int) :
     RuntimeException("Invalid payment request from account.id=$fromAccountId to account.id=$toAccountId")

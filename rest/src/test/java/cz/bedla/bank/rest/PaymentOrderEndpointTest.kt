@@ -5,8 +5,8 @@ import cz.bedla.bank.RestServer
 import cz.bedla.bank.context.ApplicationContext
 import cz.bedla.bank.domain.Account
 import cz.bedla.bank.domain.AccountType
-import cz.bedla.bank.domain.WaitingRoom
-import cz.bedla.bank.domain.WaitingRoomState
+import cz.bedla.bank.domain.PaymentOrder
+import cz.bedla.bank.domain.PaymentOrderState
 import io.restassured.RestAssured.given
 import io.restassured.http.ContentType
 import org.hamcrest.Matchers.equalTo
@@ -15,7 +15,7 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import java.time.OffsetDateTime
 
-class WaitingRoomEndpointTest {
+class PaymentOrderEndpointTest {
     private lateinit var server: RestServer
     private lateinit var applicationContext: ApplicationContext
 
@@ -31,8 +31,8 @@ class WaitingRoomEndpointTest {
 
     @Test
     fun receivePaymentRequest() {
-        mock(applicationContext.waitingRoomServiceBean()) {
-            on { receivePaymentRequest(eq(123), eq(456), eq(3.14.toBigDecimal())) } doReturn waitingRoom(111)
+        mock(applicationContext.paymentOrderServiceBean()) {
+            on { receivePaymentRequest(eq(123), eq(456), eq(3.14.toBigDecimal())) } doReturn paymentOrder(111)
         }
 
         given()
@@ -41,21 +41,21 @@ class WaitingRoomEndpointTest {
             .`when`()
             .contentType(ContentType.JSON)
             .body(mapOf("fromAccountId" to 123, "toAccountId" to 456, "amount" to 3.14))
-            .post("/api/waiting-room/transfer")
+            .post("/api/payment-order/transfer")
             .then()
             .log().all()
             .statusCode(200)
-            .body("waitingRoomId", equalTo(111))
+            .body("paymentOrderId", equalTo(111))
 
-        verify(applicationContext.waitingRoomServiceBean())
+        verify(applicationContext.paymentOrderServiceBean())
             .receivePaymentRequest(eq(123), eq(456), eq(3.14.toBigDecimal()))
-        verifyNoMoreInteractions(applicationContext.waitingRoomServiceBean())
+        verifyNoMoreInteractions(applicationContext.paymentOrderServiceBean())
     }
 
     @Test
     fun topUp() {
-        mock(applicationContext.waitingRoomServiceBean()) {
-            on { topUpRequest(eq(123), eq(3.14.toBigDecimal())) } doReturn waitingRoom(111)
+        mock(applicationContext.paymentOrderServiceBean()) {
+            on { topUpRequest(eq(123), eq(3.14.toBigDecimal())) } doReturn paymentOrder(111)
         }
 
         given()
@@ -64,21 +64,21 @@ class WaitingRoomEndpointTest {
             .`when`()
             .contentType(ContentType.JSON)
             .body(mapOf("accountId" to 123, "amount" to 3.14))
-            .post("/api/waiting-room/top-up")
+            .post("/api/payment-order/top-up")
             .then()
             .log().all()
             .statusCode(200)
-            .body("waitingRoomId", equalTo(111))
+            .body("paymentOrderId", equalTo(111))
 
-        verify(applicationContext.waitingRoomServiceBean())
+        verify(applicationContext.paymentOrderServiceBean())
             .topUpRequest(eq(123), eq(3.14.toBigDecimal()))
-        verifyNoMoreInteractions(applicationContext.waitingRoomServiceBean())
+        verifyNoMoreInteractions(applicationContext.paymentOrderServiceBean())
     }
 
     @Test
     fun withdrawal() {
-        mock(applicationContext.waitingRoomServiceBean()) {
-            on { withdrawalRequest(eq(123), eq(3.14.toBigDecimal())) } doReturn waitingRoom(111)
+        mock(applicationContext.paymentOrderServiceBean()) {
+            on { withdrawalRequest(eq(123), eq(3.14.toBigDecimal())) } doReturn paymentOrder(111)
         }
 
         given()
@@ -87,21 +87,21 @@ class WaitingRoomEndpointTest {
             .`when`()
             .contentType(ContentType.JSON)
             .body(mapOf("accountId" to 123, "amount" to 3.14))
-            .post("/api/waiting-room/withdrawal")
+            .post("/api/payment-order/withdrawal")
             .then()
             .log().all()
             .statusCode(200)
-            .body("waitingRoomId", equalTo(111))
+            .body("paymentOrderId", equalTo(111))
 
-        verify(applicationContext.waitingRoomServiceBean())
+        verify(applicationContext.paymentOrderServiceBean())
             .withdrawalRequest(eq(123), eq(3.14.toBigDecimal()))
-        verifyNoMoreInteractions(applicationContext.waitingRoomServiceBean())
+        verifyNoMoreInteractions(applicationContext.paymentOrderServiceBean())
     }
 
     @Test
     fun state() {
-        mock(applicationContext.waitingRoomServiceBean()) {
-            on { waitingRoomState(eq(123)) } doReturn WaitingRoomState.NO_FUNDS
+        mock(applicationContext.paymentOrderServiceBean()) {
+            on { paymentOrderState(eq(123)) } doReturn PaymentOrderState.NO_FUNDS
         }
 
         given()
@@ -109,23 +109,23 @@ class WaitingRoomEndpointTest {
             .port(server.port)
             .`when`()
             .contentType(ContentType.JSON)
-            .get("/api/waiting-room/123/state")
+            .get("/api/payment-order/123/state")
             .then()
             .log().all()
             .statusCode(200)
             .body("state", equalTo("NO_FUNDS"))
 
-        verify(applicationContext.waitingRoomServiceBean())
-            .waitingRoomState(eq(123))
-        verifyNoMoreInteractions(applicationContext.waitingRoomServiceBean())
+        verify(applicationContext.paymentOrderServiceBean())
+            .paymentOrderState(eq(123))
+        verifyNoMoreInteractions(applicationContext.paymentOrderServiceBean())
     }
 
-    private fun waitingRoom(id: Int): WaitingRoom =
-        WaitingRoom(
+    private fun paymentOrder(id: Int): PaymentOrder =
+        PaymentOrder(
             account(222),
             account(333),
             999.toBigDecimal(),
-            WaitingRoomState.RECEIVED,
+            PaymentOrderState.RECEIVED,
             OffsetDateTime.now(),
             id,
             1

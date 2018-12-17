@@ -3,8 +3,8 @@ package cz.bedla.bank.service.impl
 import com.nhaarman.mockitokotlin2.*
 import cz.bedla.bank.domain.Account
 import cz.bedla.bank.domain.AccountType
-import cz.bedla.bank.domain.WaitingRoom
-import cz.bedla.bank.domain.WaitingRoomState
+import cz.bedla.bank.domain.PaymentOrder
+import cz.bedla.bank.domain.PaymentOrderState
 import cz.bedla.bank.service.*
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
@@ -12,7 +12,7 @@ import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import java.time.OffsetDateTime
 
-class WaitingRoomServiceImplTest {
+class PaymentOrderServiceImplTest {
     @Nested
     inner class `Receive Payment request` {
         @Test
@@ -21,27 +21,27 @@ class WaitingRoomServiceImplTest {
                 on { findAccount(eq(123)) } doReturn account(AccountType.PERSONAL, "Mr. Foo")
                 on { findAccount(eq(456)) } doReturn account(AccountType.PERSONAL, "Mr. Bar")
             }
-            val waitingRoomDao = mock<WaitingRoomDao> {
+            val paymentOrderDao = mock<PaymentOrderDao> {
                 on { create(any()) } doAnswer returnsFirstArg()
             }
-            val fixture = WaitingRoomServiceImpl(waitingRoomDao, accountService, transactional)
+            val fixture = PaymentOrderServiceImpl(paymentOrderDao, accountService, transactional)
 
-            val waitingRoom = fixture.receivePaymentRequest(123, 456, 999.toBigDecimal())
-            assertThat(waitingRoom.fromAccount.name).isEqualTo("Mr. Foo")
-            assertThat(waitingRoom.toAccount.name).isEqualTo("Mr. Bar")
-            assertThat(waitingRoom.amount).isEqualTo(999.toBigDecimal())
-            assertThat(waitingRoom.state).isEqualTo(WaitingRoomState.RECEIVED)
+            val paymentOrder = fixture.receivePaymentRequest(123, 456, 999.toBigDecimal())
+            assertThat(paymentOrder.fromAccount.name).isEqualTo("Mr. Foo")
+            assertThat(paymentOrder.toAccount.name).isEqualTo("Mr. Bar")
+            assertThat(paymentOrder.amount).isEqualTo(999.toBigDecimal())
+            assertThat(paymentOrder.state).isEqualTo(PaymentOrderState.RECEIVED)
 
             verify(accountService).findAccount(eq(123))
             verify(accountService).findAccount(eq(456))
-            verify(waitingRoomDao).create(any())
-            verifyNoMoreInteractions(accountService, waitingRoomDao)
+            verify(paymentOrderDao).create(any())
+            verifyNoMoreInteractions(accountService, paymentOrderDao)
         }
 
 
         @Test
         fun `invalid amount`() {
-            val fixture = WaitingRoomServiceImpl(mock(), mock(), transactional)
+            val fixture = PaymentOrderServiceImpl(mock(), mock(), transactional)
             assertThatThrownBy {
                 fixture.receivePaymentRequest(123, 456, 0.toBigDecimal())
             }.isInstanceOf(IllegalStateException::class.java)
@@ -55,7 +55,7 @@ class WaitingRoomServiceImplTest {
                 on { findAccount(eq(123)) } doReturn account(AccountType.TOP_UP)
                 on { findAccount(eq(456)) } doReturn account(AccountType.PERSONAL)
             }
-            val fixture = WaitingRoomServiceImpl(mock(), accountService, transactional)
+            val fixture = PaymentOrderServiceImpl(mock(), accountService, transactional)
 
             assertThatThrownBy {
                 fixture.receivePaymentRequest(123, 456, 999.toBigDecimal())
@@ -77,26 +77,26 @@ class WaitingRoomServiceImplTest {
                 on { findAccount(eq(123)) } doReturn account(AccountType.PERSONAL, "Mr. Foo")
                 on { findTopUpAccount() } doReturn account(AccountType.TOP_UP, "Bank")
             }
-            val waitingRoomDao = mock<WaitingRoomDao> {
+            val paymentOrderDao = mock<PaymentOrderDao> {
                 on { create(any()) } doAnswer returnsFirstArg()
             }
-            val fixture = WaitingRoomServiceImpl(waitingRoomDao, accountService, transactional)
+            val fixture = PaymentOrderServiceImpl(paymentOrderDao, accountService, transactional)
 
-            val waitingRoom = fixture.topUpRequest(123, 999.toBigDecimal())
-            assertThat(waitingRoom.fromAccount.type).isEqualTo(AccountType.TOP_UP)
-            assertThat(waitingRoom.toAccount.type).isEqualTo(AccountType.PERSONAL)
-            assertThat(waitingRoom.amount).isEqualTo(999.toBigDecimal())
-            assertThat(waitingRoom.state).isEqualTo(WaitingRoomState.RECEIVED)
+            val paymentOrder = fixture.topUpRequest(123, 999.toBigDecimal())
+            assertThat(paymentOrder.fromAccount.type).isEqualTo(AccountType.TOP_UP)
+            assertThat(paymentOrder.toAccount.type).isEqualTo(AccountType.PERSONAL)
+            assertThat(paymentOrder.amount).isEqualTo(999.toBigDecimal())
+            assertThat(paymentOrder.state).isEqualTo(PaymentOrderState.RECEIVED)
 
             verify(accountService).findAccount(eq(123))
             verify(accountService).findTopUpAccount()
-            verify(waitingRoomDao).create(any())
-            verifyNoMoreInteractions(accountService, waitingRoomDao)
+            verify(paymentOrderDao).create(any())
+            verifyNoMoreInteractions(accountService, paymentOrderDao)
         }
 
         @Test
         fun `invalid amount`() {
-            val fixture = WaitingRoomServiceImpl(mock(), mock(), transactional)
+            val fixture = PaymentOrderServiceImpl(mock(), mock(), transactional)
             assertThatThrownBy {
                 fixture.topUpRequest(123, 0.toBigDecimal())
             }.isInstanceOf(IllegalStateException::class.java)
@@ -111,7 +111,7 @@ class WaitingRoomServiceImplTest {
                 on { findTopUpAccount() } doReturn account(AccountType.TOP_UP, "Bank")
             }
 
-            val fixture = WaitingRoomServiceImpl(mock(), accountService, transactional)
+            val fixture = PaymentOrderServiceImpl(mock(), accountService, transactional)
             assertThatThrownBy {
                 fixture.topUpRequest(123, 999.toBigDecimal())
             }.isInstanceOf(InvalidTopUpRequest::class.java)
@@ -127,26 +127,26 @@ class WaitingRoomServiceImplTest {
                 on { findAccount(eq(123)) } doReturn account(AccountType.PERSONAL, "Mr. Foo")
                 on { findWithdrawalAccount() } doReturn account(AccountType.WITHDRAWAL, "Bank")
             }
-            val waitingRoomDao = mock<WaitingRoomDao> {
+            val paymentOrderDao = mock<PaymentOrderDao> {
                 on { create(any()) } doAnswer returnsFirstArg()
             }
-            val fixture = WaitingRoomServiceImpl(waitingRoomDao, accountService, transactional)
+            val fixture = PaymentOrderServiceImpl(paymentOrderDao, accountService, transactional)
 
-            val waitingRoom = fixture.withdrawalRequest(123, 999.toBigDecimal())
-            assertThat(waitingRoom.fromAccount.type).isEqualTo(AccountType.PERSONAL)
-            assertThat(waitingRoom.toAccount.type).isEqualTo(AccountType.WITHDRAWAL)
-            assertThat(waitingRoom.amount).isEqualTo(999.toBigDecimal())
-            assertThat(waitingRoom.state).isEqualTo(WaitingRoomState.RECEIVED)
+            val paymentOrder = fixture.withdrawalRequest(123, 999.toBigDecimal())
+            assertThat(paymentOrder.fromAccount.type).isEqualTo(AccountType.PERSONAL)
+            assertThat(paymentOrder.toAccount.type).isEqualTo(AccountType.WITHDRAWAL)
+            assertThat(paymentOrder.amount).isEqualTo(999.toBigDecimal())
+            assertThat(paymentOrder.state).isEqualTo(PaymentOrderState.RECEIVED)
 
             verify(accountService).findAccount(eq(123))
             verify(accountService).findWithdrawalAccount()
-            verify(waitingRoomDao).create(any())
-            verifyNoMoreInteractions(accountService, waitingRoomDao)
+            verify(paymentOrderDao).create(any())
+            verifyNoMoreInteractions(accountService, paymentOrderDao)
         }
 
         @Test
         fun `invalid amount`() {
-            val fixture = WaitingRoomServiceImpl(mock(), mock(), transactional)
+            val fixture = PaymentOrderServiceImpl(mock(), mock(), transactional)
             assertThatThrownBy {
                 fixture.withdrawalRequest(123, 0.toBigDecimal())
             }.isInstanceOf(IllegalStateException::class.java)
@@ -161,7 +161,7 @@ class WaitingRoomServiceImplTest {
                 on { findWithdrawalAccount() } doReturn account(AccountType.WITHDRAWAL, "Bank")
             }
 
-            val fixture = WaitingRoomServiceImpl(mock(), accountService, transactional)
+            val fixture = PaymentOrderServiceImpl(mock(), accountService, transactional)
             assertThatThrownBy {
                 fixture.withdrawalRequest(123, 999.toBigDecimal())
             }.isInstanceOf(InvalidWithdrawalRequest::class.java)
@@ -170,22 +170,22 @@ class WaitingRoomServiceImplTest {
     }
 
     @Nested
-    inner class `List WaitingRoom requests for personal accounts` {
+    inner class `List PaymentOrder requests for personal accounts` {
         @Test
         fun `business`() {
             val accountService = mock<AccountService> {
                 on { findAccount(eq(123)) } doReturn account(AccountType.PERSONAL, "Mr. Foo")
             }
-            val waitingRoomDao = mock<WaitingRoomDao> {
+            val paymentOrderDao = mock<PaymentOrderDao> {
                 on { findItemsForAccount(any()) } doReturn listOf()
             }
 
-            val fixture = WaitingRoomServiceImpl(waitingRoomDao, accountService, transactional)
-            fixture.listWaitingRoomRequestsForPersonalAccounts(123)
+            val fixture = PaymentOrderServiceImpl(paymentOrderDao, accountService, transactional)
+            fixture.listItemsForPersonalAccounts(123)
 
             verify(accountService).findAccount(eq(123))
-            verify(waitingRoomDao).findItemsForAccount(any())
-            verifyNoMoreInteractions(accountService, waitingRoomDao)
+            verify(paymentOrderDao).findItemsForAccount(any())
+            verifyNoMoreInteractions(accountService, paymentOrderDao)
         }
 
         @Test
@@ -194,44 +194,44 @@ class WaitingRoomServiceImplTest {
                 on { findAccount(eq(123)) } doReturn account(AccountType.WITHDRAWAL, "Mr. Invalid")
             }
 
-            val fixture = WaitingRoomServiceImpl(mock(), accountService, transactional)
+            val fixture = PaymentOrderServiceImpl(mock(), accountService, transactional)
             assertThatThrownBy {
-                fixture.listWaitingRoomRequestsForPersonalAccounts(123)
+                fixture.listItemsForPersonalAccounts(123)
             }.isInstanceOf(InvalidAccountRequest::class.java)
                 .hasMessage("Invalid list request for account.id=0")
         }
     }
 
     @Nested
-    inner class `WaitingRoom state` {
+    inner class `PaymentOrder state` {
         @Test
         fun `business`() {
-            val waitingRoomDao = mock<WaitingRoomDao> {
-                on { findWaitingRoom(eq(123)) } doReturn waitingRoom(WaitingRoomState.NO_FUNDS)
+            val paymentOrderDao = mock<PaymentOrderDao> {
+                on { findPaymentOrder(eq(123)) } doReturn paymentOrder(PaymentOrderState.NO_FUNDS)
             }
 
-            val fixture = WaitingRoomServiceImpl(waitingRoomDao, mock(), transactional)
-            assertThat(fixture.waitingRoomState(123)).isEqualTo(WaitingRoomState.NO_FUNDS)
+            val fixture = PaymentOrderServiceImpl(paymentOrderDao, mock(), transactional)
+            assertThat(fixture.paymentOrderState(123)).isEqualTo(PaymentOrderState.NO_FUNDS)
 
-            verify(waitingRoomDao).findWaitingRoom(eq(123))
-            verifyNoMoreInteractions(waitingRoomDao)
+            verify(paymentOrderDao).findPaymentOrder(eq(123))
+            verifyNoMoreInteractions(paymentOrderDao)
         }
 
         @Test
         fun `invalid ID`() {
-            val waitingRoomDao = mock<WaitingRoomDao> {
-                on { findWaitingRoom(eq(123)) } doReturn null
+            val paymentOrderDao = mock<PaymentOrderDao> {
+                on { findPaymentOrder(eq(123)) } doReturn null
             }
 
-            val fixture = WaitingRoomServiceImpl(waitingRoomDao, mock(), transactional)
+            val fixture = PaymentOrderServiceImpl(paymentOrderDao, mock(), transactional)
             assertThatThrownBy {
-                fixture.waitingRoomState(123)
-            }.isInstanceOf(WaitingRoomNotFound::class.java)
-                .hasMessage("Unable to find waitingRoom.id=123")
+                fixture.paymentOrderState(123)
+            }.isInstanceOf(PaymentOrderNotFound::class.java)
+                .hasMessage("Unable to find paymentOrder.id=123")
         }
     }
 
-    private fun waitingRoom(state: WaitingRoomState) = WaitingRoom(
+    private fun paymentOrder(state: PaymentOrderState) = PaymentOrder(
         account(AccountType.PERSONAL),
         account(AccountType.PERSONAL),
         0.toBigDecimal(),

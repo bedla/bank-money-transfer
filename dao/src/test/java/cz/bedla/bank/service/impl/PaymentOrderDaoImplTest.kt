@@ -5,8 +5,8 @@ import cz.bedla.bank.DbInitializer
 import cz.bedla.bank.service.AccountDao
 import cz.bedla.bank.domain.Account
 import cz.bedla.bank.domain.AccountType
-import cz.bedla.bank.domain.WaitingRoom
-import cz.bedla.bank.domain.WaitingRoomState
+import cz.bedla.bank.domain.PaymentOrder
+import cz.bedla.bank.domain.PaymentOrderState
 import cz.bedla.bank.tx.TransactionalImpl
 import org.assertj.core.api.Assertions.*
 import org.jooq.exception.DataAccessException
@@ -20,8 +20,8 @@ import java.nio.file.Path
 import java.time.OffsetDateTime
 
 @ExtendWith(TempDirectory::class)
-class WaitingRoomDaoImplTest {
-    private lateinit var fixture: WaitingRoomDaoImpl
+class PaymentOrderDaoImplTest {
+    private lateinit var fixture: PaymentOrderDaoImpl
     private lateinit var accountDao: AccountDao
 
     private lateinit var database: DatabaseImpl
@@ -33,22 +33,22 @@ class WaitingRoomDaoImplTest {
         DbInitializer("database.sql", database.dataSource).run()
 
         accountDao = AccountDaoImpl()
-        fixture = WaitingRoomDaoImpl(accountDao)
+        fixture = PaymentOrderDaoImpl(accountDao)
     }
 
     @Test
     fun storeAndFind() {
         TransactionalImpl(database.dataSource).run {
-            val waitingRoom = createWaitingRoom()
-            assertThat(waitingRoom.id).isGreaterThan(0)
-            assertThat(waitingRoom.version).isEqualTo(1)
+            val paymentOrder = createPaymentOrder()
+            assertThat(paymentOrder.id).isGreaterThan(0)
+            assertThat(paymentOrder.version).isEqualTo(1)
 
-            val found = fixture.findWaitingRoom(waitingRoom.id) ?: fail("not found")
-            assertThat(found.id).isEqualTo(waitingRoom.id)
+            val found = fixture.findPaymentOrder(paymentOrder.id) ?: fail("not found")
+            assertThat(found.id).isEqualTo(paymentOrder.id)
             assertThat(found.fromAccount.name).isEqualTo("bank top-up");
             assertThat(found.toAccount.name).isEqualTo("Mr. Foo");
             assertThat(found.amount).isEqualTo(100.toBigDecimal());
-            assertThat(found.state).isEqualTo(WaitingRoomState.RECEIVED);
+            assertThat(found.state).isEqualTo(PaymentOrderState.RECEIVED);
             assertThat(found.dateCreated).isAfter(OffsetDateTime.now().minusDays(1));
             assertThat(found.version).isEqualTo(1)
         }
@@ -61,7 +61,7 @@ class WaitingRoomDaoImplTest {
             val invalidTo = Account(AccountType.PERSONAL, "Mr. Bar", OffsetDateTime.now(), 0.toBigDecimal())
 
             assertThatThrownBy {
-                fixture.create(WaitingRoom(invalidFrom, invalidTo, 100.toBigDecimal(), WaitingRoomState.RECEIVED, OffsetDateTime.now()))
+                fixture.create(PaymentOrder(invalidFrom, invalidTo, 100.toBigDecimal(), PaymentOrderState.RECEIVED, OffsetDateTime.now()))
             }.isInstanceOf(DataAccessException::class.java)
                     .hasMessageContaining("Referential integrity constraint violation")
         }
@@ -75,20 +75,20 @@ class WaitingRoomDaoImplTest {
             val toAccount = accountDao.createAccount(
                     Account(AccountType.PERSONAL, "Mr. Foo", OffsetDateTime.now(), 0.toBigDecimal()))
 
-            fixture.create(WaitingRoom(fromAccount, toAccount, 1.toBigDecimal(), WaitingRoomState.RECEIVED, OffsetDateTime.now().minusDays(2)))
-            fixture.create(WaitingRoom(fromAccount, toAccount, 2.toBigDecimal(), WaitingRoomState.RECEIVED, OffsetDateTime.now().minusDays(1)))
-            fixture.create(WaitingRoom(fromAccount, toAccount, 100.toBigDecimal(), WaitingRoomState.NO_FUNDS, OffsetDateTime.now()))
+            fixture.create(PaymentOrder(fromAccount, toAccount, 1.toBigDecimal(), PaymentOrderState.RECEIVED, OffsetDateTime.now().minusDays(2)))
+            fixture.create(PaymentOrder(fromAccount, toAccount, 2.toBigDecimal(), PaymentOrderState.RECEIVED, OffsetDateTime.now().minusDays(1)))
+            fixture.create(PaymentOrder(fromAccount, toAccount, 100.toBigDecimal(), PaymentOrderState.NO_FUNDS, OffsetDateTime.now()))
 
-            val received = fixture.findItemsWithState(WaitingRoomState.RECEIVED)
+            val received = fixture.findItemsWithState(PaymentOrderState.RECEIVED)
             assertThat(received).hasSize(2)
             assertThat(received[0].amount).isEqualTo(1.toBigDecimal())
             assertThat(received[1].amount).isEqualTo(2.toBigDecimal())
 
-            val noFunds = fixture.findItemsWithState(WaitingRoomState.NO_FUNDS)
+            val noFunds = fixture.findItemsWithState(PaymentOrderState.NO_FUNDS)
             assertThat(noFunds).hasSize(1)
             assertThat(noFunds[0].amount).isEqualTo(100.toBigDecimal())
 
-            val ok = fixture.findItemsWithState(WaitingRoomState.OK)
+            val ok = fixture.findItemsWithState(PaymentOrderState.OK)
             assertThat(ok).isEmpty()
         }
     }
@@ -103,8 +103,8 @@ class WaitingRoomDaoImplTest {
             val account3 = accountDao.createAccount(
                     Account(AccountType.PERSONAL, "Mr. Bar", OffsetDateTime.now(), 0.toBigDecimal()))
 
-            fixture.create(WaitingRoom(account1, account2, 1.toBigDecimal(), WaitingRoomState.RECEIVED, OffsetDateTime.now().minusDays(2)))
-            fixture.create(WaitingRoom(account1, account3, 2.toBigDecimal(), WaitingRoomState.RECEIVED, OffsetDateTime.now().minusDays(1)))
+            fixture.create(PaymentOrder(account1, account2, 1.toBigDecimal(), PaymentOrderState.RECEIVED, OffsetDateTime.now().minusDays(2)))
+            fixture.create(PaymentOrder(account1, account3, 2.toBigDecimal(), PaymentOrderState.RECEIVED, OffsetDateTime.now().minusDays(1)))
 
             val list = fixture.findItemsForAccount(account1)
             assertThat(list).hasSize(2)
@@ -116,12 +116,12 @@ class WaitingRoomDaoImplTest {
     @Test
     fun updateState() {
         TransactionalImpl(database.dataSource).run {
-            val waitingRoom = createWaitingRoom()
+            val paymentOrder = createPaymentOrder()
 
-            fixture.updateState(waitingRoom.copy(state = WaitingRoomState.NO_FUNDS))
+            fixture.updateState(paymentOrder.copy(state = PaymentOrderState.NO_FUNDS))
 
-            (fixture.findWaitingRoom(waitingRoom.id) ?: fail("not found")).also {
-                assertThat(it.state).isEqualTo(WaitingRoomState.NO_FUNDS)
+            (fixture.findPaymentOrder(paymentOrder.id) ?: fail("not found")).also {
+                assertThat(it.state).isEqualTo(PaymentOrderState.NO_FUNDS)
             }
         }
     }
@@ -129,10 +129,10 @@ class WaitingRoomDaoImplTest {
     @Test
     fun updateStateInvalidOptimisticLock() {
         TransactionalImpl(database.dataSource).run {
-            val waitingRoom = createWaitingRoom()
+            val paymentOrder = createPaymentOrder()
 
             assertThatThrownBy {
-                fixture.updateState(waitingRoom.copy(state = WaitingRoomState.NO_FUNDS, version = 999999))
+                fixture.updateState(paymentOrder.copy(state = PaymentOrderState.NO_FUNDS, version = 999999))
             }.isInstanceOf(DataChangedException::class.java)
                     .hasMessage("Database record has been changed or doesn't exist any longer")
         }
@@ -141,11 +141,11 @@ class WaitingRoomDaoImplTest {
     @Test
     fun delete() {
         TransactionalImpl(database.dataSource).run {
-            val waitingRoom = createWaitingRoom()
+            val paymentOrder = createPaymentOrder()
 
-            fixture.delete(waitingRoom)
+            fixture.delete(paymentOrder)
 
-            assertThat(fixture.findWaitingRoom(waitingRoom.id)).isNull()
+            assertThat(fixture.findPaymentOrder(paymentOrder.id)).isNull()
             assertThat(accountDao.findAccounts()).hasSize(2)
         }
     }
@@ -153,10 +153,10 @@ class WaitingRoomDaoImplTest {
     @Test
     fun deleteWithOptimisticLock() {
         TransactionalImpl(database.dataSource).run {
-            val waitingRoom = createWaitingRoom()
+            val paymentOrder = createPaymentOrder()
 
             assertThatThrownBy {
-                fixture.delete(waitingRoom.copy(version = 999))
+                fixture.delete(paymentOrder.copy(version = 999))
             }.isInstanceOf(DataChangedException::class.java)
                     .hasMessage("Database record has been changed or doesn't exist any longer")
         }
@@ -165,22 +165,22 @@ class WaitingRoomDaoImplTest {
     @Test
     fun deleteNotFound() {
         TransactionalImpl(database.dataSource).run {
-            val waitingRoom = createWaitingRoom()
+            val paymentOrder = createPaymentOrder()
 
             assertThatThrownBy {
-                fixture.delete(waitingRoom.copy(id = 123))
+                fixture.delete(paymentOrder.copy(id = 123))
             }.isInstanceOf(DataChangedException::class.java)
                     .hasMessage("Record id=123 not found")
         }
     }
 
-    private fun createWaitingRoom(): WaitingRoom {
+    private fun createPaymentOrder(): PaymentOrder {
         val fromAccount = accountDao.createAccount(
                 Account(AccountType.TOP_UP, "bank top-up", OffsetDateTime.now(), 999999.toBigDecimal()))
         val toAccount = accountDao.createAccount(
                 Account(AccountType.PERSONAL, "Mr. Foo", OffsetDateTime.now(), 0.toBigDecimal()))
 
-        return fixture.create(WaitingRoom(fromAccount, toAccount, 100.toBigDecimal(), WaitingRoomState.RECEIVED, OffsetDateTime.now()))
+        return fixture.create(PaymentOrder(fromAccount, toAccount, 100.toBigDecimal(), PaymentOrderState.RECEIVED, OffsetDateTime.now()))
     }
 
     @AfterEach

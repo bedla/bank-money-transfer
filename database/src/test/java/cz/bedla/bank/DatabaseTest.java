@@ -37,7 +37,7 @@ class DatabaseTest {
 
     private void testConnection(DataSource dataSource) {
         try (Connection connection = fixture.getDataSource().getConnection()) {
-            try (final PreparedStatement preparedStatement = connection.prepareStatement("SELECT COUNT(*) FROM waiting_room")) {
+            try (final PreparedStatement preparedStatement = connection.prepareStatement("SELECT COUNT(*) FROM payment_order")) {
                 try (final ResultSet resultSet = preparedStatement.executeQuery()) {
                     assertThat(resultSet.next()).isTrue();
                     assertThat(resultSet.getInt(1)).isEqualTo(0);

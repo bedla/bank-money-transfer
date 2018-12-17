@@ -60,28 +60,28 @@ class IntegrationTest {
             assertThat(accountBalance(accountId1)).isEqualTo(0.toBigDecimal())
             assertThat(accountBalance(accountId2)).isEqualTo(0.toBigDecimal())
 
-            val waitingRoomTopUpId = topUpAccount(accountId1, 100)
-            awaitUntilWaitingRoomState(waitingRoomTopUpId, "OK")
+            val paymentOrderTopUpId = topUpAccount(accountId1, 100)
+            awaitUntilPaymentOrderState(paymentOrderTopUpId, "OK")
             assertThat(accountBalance(accountId1)).isEqualTo(100.toBigDecimal())
             assertThat(accountBalance(accountId2)).isEqualTo(0.toBigDecimal())
 
-            val waitingRoomTransferId = transferMoney(accountId1, accountId2, 50)
-            awaitUntilWaitingRoomState(waitingRoomTransferId, "OK")
+            val paymentOrderTransferId = transferMoney(accountId1, accountId2, 50)
+            awaitUntilPaymentOrderState(paymentOrderTransferId, "OK")
             assertThat(accountBalance(accountId1)).isEqualTo(50.toBigDecimal())
             assertThat(accountBalance(accountId2)).isEqualTo(50.toBigDecimal())
 
-            val waitingRoomWithdrawalId = withdrawalAccount(accountId2, 10)
-            awaitUntilWaitingRoomState(waitingRoomWithdrawalId, "OK")
+            val paymentOrderWithdrawalId = withdrawalAccount(accountId2, 10)
+            awaitUntilPaymentOrderState(paymentOrderWithdrawalId, "OK")
             assertThat(accountBalance(accountId1)).isEqualTo(50.toBigDecimal())
             assertThat(accountBalance(accountId2)).isEqualTo(40.toBigDecimal())
 
-            val waitingRoomNoFundsId = transferMoney(accountId2, accountId1, 999)
-            awaitUntilWaitingRoomState(waitingRoomNoFundsId, "NO_FUNDS")
+            val paymentOrderNoFundsId = transferMoney(accountId2, accountId1, 999)
+            awaitUntilPaymentOrderState(paymentOrderNoFundsId, "NO_FUNDS")
             assertThat(accountBalance(accountId1)).isEqualTo(50.toBigDecimal())
             assertThat(accountBalance(accountId2)).isEqualTo(40.toBigDecimal())
 
-            val waitingRoomCannotWithdrawalId = withdrawalAccount(accountId2, 999)
-            awaitUntilWaitingRoomState(waitingRoomCannotWithdrawalId, "NO_FUNDS")
+            val paymentOrderCannotWithdrawalId = withdrawalAccount(accountId2, 999)
+            awaitUntilPaymentOrderState(paymentOrderCannotWithdrawalId, "NO_FUNDS")
             assertThat(accountBalance(accountId1)).isEqualTo(50.toBigDecimal())
             assertThat(accountBalance(accountId2)).isEqualTo(40.toBigDecimal())
 
@@ -97,12 +97,12 @@ class IntegrationTest {
 
             val transactions1 = transactions(accountId1)
             assertThat(transactions1).hasSize(2)
-            assertThat(transactions1[0].waitingRoomDateReceived).isAfter(now.minusDays(1))
+            assertThat(transactions1[0].paymentOrderDateReceived).isAfter(now.minusDays(1))
             assertThat(transactions1[0].fromAccountName).isEqualTo("<internal top-up>")
             assertThat(transactions1[0].toAccountName).isEqualTo("Mr. Foo")
             assertThat(transactions1[0].dateTransacted).isAfter(now.minusDays(1))
             assertThat(transactions1[0].amount).isEqualTo(100.toBigDecimal())
-            assertThat(transactions1[1].waitingRoomDateReceived).isAfter(now.minusDays(1))
+            assertThat(transactions1[1].paymentOrderDateReceived).isAfter(now.minusDays(1))
             assertThat(transactions1[1].fromAccountName).isEqualTo("Mr. Foo")
             assertThat(transactions1[1].toAccountName).isEqualTo("Mr. Bar")
             assertThat(transactions1[1].dateTransacted).isAfter(now.minusDays(1))
@@ -110,12 +110,12 @@ class IntegrationTest {
 
             val transactions2 = transactions(accountId2)
             assertThat(transactions2).hasSize(2)
-            assertThat(transactions2[0].waitingRoomDateReceived).isAfter(now.minusDays(1))
+            assertThat(transactions2[0].paymentOrderDateReceived).isAfter(now.minusDays(1))
             assertThat(transactions2[0].fromAccountName).isEqualTo("Mr. Foo")
             assertThat(transactions2[0].toAccountName).isEqualTo("Mr. Bar")
             assertThat(transactions2[0].dateTransacted).isAfter(now.minusDays(1))
             assertThat(transactions2[0].amount).isEqualTo(50.toBigDecimal())
-            assertThat(transactions2[1].waitingRoomDateReceived).isAfter(now.minusDays(1))
+            assertThat(transactions2[1].paymentOrderDateReceived).isAfter(now.minusDays(1))
             assertThat(transactions2[1].fromAccountName).isEqualTo("Mr. Bar")
             assertThat(transactions2[1].toAccountName).isEqualTo("<internal withdrawal>")
             assertThat(transactions2[1].dateTransacted).isAfter(now.minusDays(1))
@@ -167,28 +167,28 @@ class IntegrationTest {
             .`when`()
             .contentType(ContentType.JSON)
             .body(mapOf("fromAccountId" to accountId1, "toAccountId" to accountId2, "amount" to amount))
-            .post("/api/waiting-room/transfer")
+            .post("/api/payment-order/transfer")
             .then()
             .log().all()
             .statusCode(200)
             .extract()
             .body()
-            .jsonPath().getInt("waitingRoomId")
+            .jsonPath().getInt("paymentOrderId")
     }
 
-    private fun awaitUntilWaitingRoomState(waitingRoomId: Int, expectedState: String) {
+    private fun awaitUntilPaymentOrderState(paymentOrderId: Int, expectedState: String) {
         Awaitility.await().atMost(5L, TimeUnit.SECONDS).until {
-            waitingRoomState(waitingRoomId) == expectedState
+            paymentOrderState(paymentOrderId) == expectedState
         }
     }
 
-    private fun waitingRoomState(waitingRoomId: Int): String {
+    private fun paymentOrderState(paymentOrderId: Int): String {
         return given()
             .log().all()
             .port(server.port)
             .`when`()
             .contentType(ContentType.JSON)
-            .get("/api/waiting-room/$waitingRoomId/state")
+            .get("/api/payment-order/$paymentOrderId/state")
             .then()
             .log().all()
             .statusCode(200)
@@ -205,14 +205,14 @@ class IntegrationTest {
             .`when`()
             .contentType(ContentType.JSON)
             .body(mapOf("accountId" to accountId, "amount" to amount))
-            .post("/api/waiting-room/top-up")
+            .post("/api/payment-order/top-up")
             .then()
             .log().all()
             .statusCode(200)
             .extract()
             .body()
             .jsonPath()
-            .getInt("waitingRoomId")
+            .getInt("paymentOrderId")
     }
 
     private fun withdrawalAccount(accountId: Int, amount: Int): Int {
@@ -222,14 +222,14 @@ class IntegrationTest {
             .`when`()
             .contentType(ContentType.JSON)
             .body(mapOf("accountId" to accountId, "amount" to amount))
-            .post("/api/waiting-room/withdrawal")
+            .post("/api/payment-order/withdrawal")
             .then()
             .log().all()
             .statusCode(200)
             .extract()
             .body()
             .jsonPath()
-            .getInt("waitingRoomId")
+            .getInt("paymentOrderId")
     }
 
     private fun createAccount(name: String): Int {
@@ -276,7 +276,7 @@ class IntegrationTest {
     )
 
     data class TransactionDto @JsonCreator constructor(
-        @JsonProperty("waitingRoomDateReceived") val waitingRoomDateReceived: OffsetDateTime,
+        @JsonProperty("paymentOrderDateReceived") val paymentOrderDateReceived: OffsetDateTime,
         @JsonProperty("fromAccountName") val fromAccountName: String,
         @JsonProperty("toAccountName") val toAccountName: String,
         @JsonProperty("dateTransacted") val dateTransacted: OffsetDateTime,

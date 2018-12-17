@@ -1,9 +1,9 @@
 package cz.bedla.bank.service
 
-import cz.bedla.bank.domain.WaitingRoom
+import cz.bedla.bank.domain.PaymentOrder
 
 interface Transactor {
-    fun process(waitingRoom: WaitingRoom)
+    fun process(paymentOrder: PaymentOrder)
     fun start()
     fun stop()
 }

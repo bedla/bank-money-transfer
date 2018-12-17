@@ -16,16 +16,16 @@ class ApplicationContextImpl(
     private val coordinatorInitDelaySeconds: Int = 5,
     private val coordinatorPeriodSeconds: Int = 5
 ) : ApplicationContext {
-    private val waitingRoomService = lazyBean {
-        WaitingRoomServiceImpl(
-            waitingRoomDaoBean(),
+    private val paymentOrderService = lazyBean {
+        PaymentOrderServiceImpl(
+            paymentOrderDaoBean(),
             accountServiceBean(),
             transactionalBean()
         )
     }
 
-    private val waitingRoomDao = lazyBean {
-        WaitingRoomDaoImpl(accountDaoBean())
+    private val paymentOrderDao = lazyBean {
+        PaymentOrderDaoImpl(accountDaoBean())
     }
 
     private val accountDao = lazyBean {
@@ -33,7 +33,7 @@ class ApplicationContextImpl(
     }
 
     private val transactionDao = lazyBean {
-        TransactionDaoIml(accountDaoBean(), waitingRoomDaoBean())
+        TransactionDaoIml(accountDaoBean(), paymentOrderDaoBean())
     }
 
     private val transactionService = lazyBean {
@@ -57,7 +57,7 @@ class ApplicationContextImpl(
             Runtime.getRuntime().availableProcessors() * 2,
             coordinatorInitDelaySeconds,
             coordinatorPeriodSeconds,
-            waitingRoomServiceBean(),
+            paymentOrderServiceBean(),
             transactorBean()
         )
     }
@@ -65,7 +65,7 @@ class ApplicationContextImpl(
     private val transactor = lazyBean {
         TransactorImpl(
             transactionDaoBean(),
-            waitingRoomDaoBean(),
+            paymentOrderDaoBean(),
             accountDaoBean(),
             transactionalBean()
         )
@@ -75,9 +75,9 @@ class ApplicationContextImpl(
         BankInitializerImpl(accountServiceBean())
     }
 
-    override fun waitingRoomServiceBean(): WaitingRoomService = waitingRoomService.value
+    override fun paymentOrderServiceBean(): PaymentOrderService = paymentOrderService.value
 
-    override fun waitingRoomDaoBean(): WaitingRoomDao = waitingRoomDao.value
+    override fun paymentOrderDaoBean(): PaymentOrderDao = paymentOrderDao.value
 
     override fun accountDaoBean(): AccountDao = accountDao.value
 

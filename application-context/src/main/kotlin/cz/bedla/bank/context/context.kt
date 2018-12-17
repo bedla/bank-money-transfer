@@ -5,8 +5,8 @@ import cz.bedla.bank.service.*
 import cz.bedla.bank.tx.Transactional
 
 interface ApplicationContext {
-    fun waitingRoomServiceBean(): WaitingRoomService
-    fun waitingRoomDaoBean(): WaitingRoomDao
+    fun paymentOrderServiceBean(): PaymentOrderService
+    fun paymentOrderDaoBean(): PaymentOrderDao
     fun accountServiceBean(): AccountService
     fun accountDaoBean(): AccountDao
     fun transactionDaoBean(): TransactionDao

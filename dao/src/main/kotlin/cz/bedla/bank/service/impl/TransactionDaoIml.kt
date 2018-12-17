@@ -6,7 +6,7 @@ import cz.bedla.bank.jooq.Tables.TRANSACTION
 import cz.bedla.bank.jooq.tables.records.TransactionRecord
 import cz.bedla.bank.service.AccountDao
 import cz.bedla.bank.service.TransactionDao
-import cz.bedla.bank.service.WaitingRoomDao
+import cz.bedla.bank.service.PaymentOrderDao
 import cz.bedla.bank.service.createDsl
 import org.jooq.impl.DSL.sum
 import java.math.BigDecimal
@@ -14,10 +14,10 @@ import java.time.OffsetDateTime
 
 class TransactionDaoIml(
     private val accountDao: AccountDao,
-    private val waitingRoomDao: WaitingRoomDao
+    private val paymentOrderDao: PaymentOrderDao
 ) : TransactionDao {
     override fun create(
-        waitingRoomId: Int,
+        paymentOrderId: Int,
         fromAccountId: Int,
         toAccountId: Int,
         amount: BigDecimal,
@@ -26,7 +26,7 @@ class TransactionDaoIml(
         val dsl = createDsl()
 
         val transactionRecord = dsl.newRecord(TRANSACTION)
-        transactionRecord.wrId = waitingRoomId
+        transactionRecord.poId = paymentOrderId
         transactionRecord.fromAccId = fromAccountId
         transactionRecord.toAccId = toAccountId
         transactionRecord.amount = amount
@@ -34,7 +34,7 @@ class TransactionDaoIml(
 
         transactionRecord.store()
 
-        return transactionRecord.toTransaction(accountDao, waitingRoomDao)
+        return transactionRecord.toTransaction(accountDao, paymentOrderDao)
     }
 
     override fun calculateBalance(account: Account): BigDecimal {
@@ -61,24 +61,24 @@ class TransactionDaoIml(
             .or(TRANSACTION.TO_ACC_ID.eq(account.id))
             .orderBy(TRANSACTION.DATE_TRANSACTED)
             .fetch()
-            .map { it.toTransaction(accountDao, waitingRoomDao) }
+            .map { it.toTransaction(accountDao, paymentOrderDao) }
     }
 
     // TODO solve N+1 problem
-    private fun TransactionRecord.toTransaction(accountDao: AccountDao, waitingRoomDao: WaitingRoomDao): Transaction {
+    private fun TransactionRecord.toTransaction(accountDao: AccountDao, paymentOrderDao: PaymentOrderDao): Transaction {
         val fromAccountId: Int = getValue(TRANSACTION.FROM_ACC_ID)
         val toAccountId: Int = getValue(TRANSACTION.TO_ACC_ID)
-        val wrId: Int = getValue(TRANSACTION.WR_ID)
+        val wrId: Int = getValue(TRANSACTION.PO_ID)
 
         val fromAccount = accountDao.findAccount(fromAccountId)
             ?: throw IllegalStateException("Unable to find fromAccount.id=$fromAccountId for transaction.wrId=$wrId")
         val toAccount = accountDao.findAccount(toAccountId)
             ?: throw IllegalStateException("Unable to find toAccount.id=$toAccountId for transaction.wrId=$wrId")
-        val waitingRoom = waitingRoomDao.findWaitingRoom(wrId)
-            ?: throw IllegalStateException("Unable to find waitingRoom.id=$wrId for transaction.wrId=$wrId")
+        val paymentOrder = paymentOrderDao.findPaymentOrder(wrId)
+            ?: throw IllegalStateException("Unable to find paymentOrder.id=$wrId for transaction.wrId=$wrId")
 
         return Transaction(
-            waitingRoom,
+            paymentOrder,
             fromAccount,
             toAccount,
             getValue(TRANSACTION.AMOUNT),

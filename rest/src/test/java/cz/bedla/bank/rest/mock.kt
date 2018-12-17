@@ -8,9 +8,9 @@ import cz.bedla.bank.tx.Transactional
 import org.mockito.Mockito.mock
 
 internal class MockApplicationContext : ApplicationContext {
-    private val waitingRoomService = mock(WaitingRoomService::class.java)
+    private val paymentOrderService = mock(PaymentOrderService::class.java)
 
-    private val waitingRoomDao = mock(WaitingRoomDao::class.java)
+    private val paymentOrderDao = mock(PaymentOrderDao::class.java)
 
     private val accountDao = mock(AccountDao::class.java)
 
@@ -30,9 +30,9 @@ internal class MockApplicationContext : ApplicationContext {
 
     private val bankInitializer = mock(BankInitializer::class.java)
 
-    override fun waitingRoomServiceBean(): WaitingRoomService = waitingRoomService
+    override fun paymentOrderServiceBean(): PaymentOrderService = paymentOrderService
 
-    override fun waitingRoomDaoBean(): WaitingRoomDao = waitingRoomDao
+    override fun paymentOrderDaoBean(): PaymentOrderDao = paymentOrderDao
 
     override fun accountDaoBean(): AccountDao = accountDao
 

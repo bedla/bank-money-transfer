@@ -7,7 +7,7 @@ import java.time.OffsetDateTime
 
 interface TransactionDao : Dao {
     fun create(
-        waitingRoomId: Int,
+        paymentOrderId: Int,
         fromAccountId: Int,
         toAccountId: Int,
         amount: BigDecimal,

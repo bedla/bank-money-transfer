@@ -125,17 +125,17 @@ class AccountEndpointTest {
             .log().all()
             .statusCode(200)
             .body(
-                "[0].waitingRoomDateReceived", equalTo("2018-01-02T10:42:01+01:00"),
+                "[0].paymentOrderDateReceived", equalTo("2018-01-02T10:42:01+01:00"),
                 "[0].fromAccountName", equalTo("<internal top-up>"),
                 "[0].toAccountName", equalTo("Mr. Foo"),
                 "[0].amount", equalTo(100),
                 "[0].dateTransacted", equalTo("2018-01-02T11:42:01+01:00"),
-                "[1].waitingRoomDateReceived", equalTo("2018-01-03T10:42:01+01:00"),
+                "[1].paymentOrderDateReceived", equalTo("2018-01-03T10:42:01+01:00"),
                 "[1].fromAccountName", equalTo("Mr. Foo"),
                 "[1].toAccountName", equalTo("Mr. Bar"),
                 "[1].amount", equalTo(42),
                 "[1].dateTransacted", equalTo("2018-01-03T12:42:01+01:00"),
-                "[2].waitingRoomDateReceived", equalTo("2018-01-04T10:42:01+01:00"),
+                "[2].paymentOrderDateReceived", equalTo("2018-01-04T10:42:01+01:00"),
                 "[2].fromAccountName", equalTo("Mr. Foo"),
                 "[2].toAccountName", equalTo("<internal withdrawal>"),
                 "[2].amount", equalTo(6),
@@ -153,36 +153,36 @@ class AccountEndpointTest {
         val topUpAccount = Account(AccountType.TOP_UP, "Bank top-up account", now, 789.toBigDecimal())
         val withdrawalAccount = Account(AccountType.WITHDRAWAL, "Bank withdrwaral account", now, 101112.toBigDecimal())
 
-        val waitingRoom1 = WaitingRoom(
-            topUpAccount, mainAccount, 100.toBigDecimal(), WaitingRoomState.OK, now.plusDays(1)
+        val paymentOrder1 = PaymentOrder(
+            topUpAccount, mainAccount, 100.toBigDecimal(), PaymentOrderState.OK, now.plusDays(1)
         )
-        val waitingRoom2 = WaitingRoom(
-            mainAccount, account1, 42.toBigDecimal(), WaitingRoomState.OK, now.plusDays(2)
+        val paymentOrder2 = PaymentOrder(
+            mainAccount, account1, 42.toBigDecimal(), PaymentOrderState.OK, now.plusDays(2)
         )
-        val waitingRoom3 = WaitingRoom(
-            mainAccount, withdrawalAccount, 6.toBigDecimal(), WaitingRoomState.OK, now.plusDays(3)
+        val paymentOrder3 = PaymentOrder(
+            mainAccount, withdrawalAccount, 6.toBigDecimal(), PaymentOrderState.OK, now.plusDays(3)
         )
         return listOf(
             Transaction(
-                waitingRoom1,
-                waitingRoom1.fromAccount,
-                waitingRoom1.toAccount,
-                waitingRoom1.amount,
-                waitingRoom1.dateCreated.plusHours(1)
+                paymentOrder1,
+                paymentOrder1.fromAccount,
+                paymentOrder1.toAccount,
+                paymentOrder1.amount,
+                paymentOrder1.dateCreated.plusHours(1)
             ),
             Transaction(
-                waitingRoom2,
-                waitingRoom2.fromAccount,
-                waitingRoom2.toAccount,
-                waitingRoom2.amount,
-                waitingRoom2.dateCreated.plusHours(2)
+                paymentOrder2,
+                paymentOrder2.fromAccount,
+                paymentOrder2.toAccount,
+                paymentOrder2.amount,
+                paymentOrder2.dateCreated.plusHours(2)
             ),
             Transaction(
-                waitingRoom3,
-                waitingRoom3.fromAccount,
-                waitingRoom3.toAccount,
-                waitingRoom3.amount,
-                waitingRoom3.dateCreated.plusHours(3)
+                paymentOrder3,
+                paymentOrder3.fromAccount,
+                paymentOrder3.toAccount,
+                paymentOrder3.amount,
+                paymentOrder3.dateCreated.plusHours(3)
             )
         )
     }

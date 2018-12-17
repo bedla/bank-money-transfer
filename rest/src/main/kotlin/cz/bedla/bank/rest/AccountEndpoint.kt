@@ -68,7 +68,7 @@ class AccountEndpoint(@Context override val servletContext: ServletContext) : En
     data class AccountBalanceResponse(val accountName: String, val balance: BigDecimal)
 
     data class TransactionResponse(
-        val waitingRoomDateReceived: OffsetDateTime,
+        val paymentOrderDateReceived: OffsetDateTime,
         val fromAccountName: String,
         val toAccountName: String,
         val amount: BigDecimal,
@@ -83,7 +83,7 @@ class AccountEndpoint(@Context override val servletContext: ServletContext) : En
         }
 
         return TransactionResponse(
-            waitingRoom.dateCreated,
+            paymentOrder.dateCreated,
             fromAccount.safeName(),
             toAccount.safeName(),
             amount,

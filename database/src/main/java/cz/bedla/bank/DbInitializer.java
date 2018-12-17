@@ -30,7 +30,7 @@ public final class DbInitializer {
     public boolean checkDbInitialized() {
         try (Connection connection = dataSource.getConnection()) {
             try (Statement statement = connection.createStatement()) {
-                try (ResultSet ignored = statement.executeQuery("SELECT COUNT(*) FROM waiting_room")) {
+                try (ResultSet ignored = statement.executeQuery("SELECT COUNT(*) FROM payment_order")) {
                     return true;
                 } catch (Exception e) {
                     return false;

@@ -2,19 +2,19 @@ package cz.bedla.bank.service.impl
 
 import cz.bedla.bank.domain.Account
 import cz.bedla.bank.domain.AccountType
-import cz.bedla.bank.domain.WaitingRoom
-import cz.bedla.bank.domain.WaitingRoomState
+import cz.bedla.bank.domain.PaymentOrder
+import cz.bedla.bank.domain.PaymentOrderState
 import cz.bedla.bank.service.*
 import cz.bedla.bank.tx.Transactional
 import java.math.BigDecimal
 import java.time.OffsetDateTime
 
-class WaitingRoomServiceImpl(
-    private val waitingRoomDao: WaitingRoomDao,
+class PaymentOrderServiceImpl(
+    private val paymentOrderDao: PaymentOrderDao,
     private val accountService: AccountService,
     private val transactional: Transactional
-) : WaitingRoomService {
-    override fun receivePaymentRequest(fromAccountId: Int, toAccountId: Int, amount: BigDecimal): WaitingRoom =
+) : PaymentOrderService {
+    override fun receivePaymentRequest(fromAccountId: Int, toAccountId: Int, amount: BigDecimal): PaymentOrder =
         transactional.execute {
             check(amount > 0.toBigDecimal()) { "Invalid amount value" }
 
@@ -22,12 +22,12 @@ class WaitingRoomServiceImpl(
             val toAccount = accountService.findAccount(toAccountId)
 
             if (fromAccount.type == AccountType.PERSONAL && toAccount.type == AccountType.PERSONAL) {
-                waitingRoomDao.create(
-                    WaitingRoom(
+                paymentOrderDao.create(
+                    PaymentOrder(
                         fromAccount,
                         toAccount,
                         amount,
-                        WaitingRoomState.RECEIVED,
+                        PaymentOrderState.RECEIVED,
                         OffsetDateTime.now()
                     )
                 )
@@ -36,60 +36,60 @@ class WaitingRoomServiceImpl(
             }
         }
 
-    override fun topUpRequest(toAccountId: Int, amount: BigDecimal): WaitingRoom = transactional.execute {
+    override fun topUpRequest(toAccountId: Int, amount: BigDecimal): PaymentOrder = transactional.execute {
         check(amount > 0.toBigDecimal()) { "Invalid amount value" }
 
         val account = accountService.findAccount(toAccountId)
         val topUpAccount = accountService.findTopUpAccount()
 
         account.topUpWithPersonalAccountOnly {
-            waitingRoomDao.create(
-                WaitingRoom(
+            paymentOrderDao.create(
+                PaymentOrder(
                     topUpAccount,
                     it,
                     amount,
-                    WaitingRoomState.RECEIVED,
+                    PaymentOrderState.RECEIVED,
                     OffsetDateTime.now()
                 )
             )
         }
     }
 
-    override fun withdrawalRequest(fromAccountId: Int, amount: BigDecimal): WaitingRoom = transactional.execute {
+    override fun withdrawalRequest(fromAccountId: Int, amount: BigDecimal): PaymentOrder = transactional.execute {
         check(amount > 0.toBigDecimal()) { "Invalid amount value" }
 
         val account = accountService.findAccount(fromAccountId)
         val withdrawalAccount = accountService.findWithdrawalAccount()
 
         account.withdrawWithPersonalAccountOnly {
-            waitingRoomDao.create(
-                WaitingRoom(
+            paymentOrderDao.create(
+                PaymentOrder(
                     it,
                     withdrawalAccount,
                     amount,
-                    WaitingRoomState.RECEIVED,
+                    PaymentOrderState.RECEIVED,
                     OffsetDateTime.now()
                 )
             )
         }
     }
 
-    override fun waitingRoomState(id: Int): WaitingRoomState = transactional.execute {
-        (waitingRoomDao.findWaitingRoom(id) ?: throw WaitingRoomNotFound(id)).state
+    override fun paymentOrderState(id: Int): PaymentOrderState = transactional.execute {
+        (paymentOrderDao.findPaymentOrder(id) ?: throw PaymentOrderNotFound(id)).state
     }
 
-    override fun listWaitingRoomRequestsForPersonalAccounts(accountId: Int): List<WaitingRoom> = transactional.execute {
+    override fun listItemsForPersonalAccounts(accountId: Int): List<PaymentOrder> = transactional.execute {
         val account = accountService.findAccount(accountId)
 
         account.withPersonalAccountOnly({
-            waitingRoomDao.findItemsForAccount(it)
+            paymentOrderDao.findItemsForAccount(it)
         }, {
             throw InvalidAccountRequest(it.id, "list request")
         })
     }
 
-    override fun listWaitingRoomsToProcess(): List<WaitingRoom> = transactional.execute {
-        waitingRoomDao.findItemsWithState(WaitingRoomState.RECEIVED)
+    override fun listItemsToProcess(): List<PaymentOrder> = transactional.execute {
+        paymentOrderDao.findItemsWithState(PaymentOrderState.RECEIVED)
     }
 
     private inline fun <T> Account.withdrawWithPersonalAccountOnly(block: (Account) -> T): T =

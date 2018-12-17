@@ -8,43 +8,43 @@ import javax.ws.rs.*
 import javax.ws.rs.core.Context
 
 
-@Path("/waiting-room")
+@Path("/payment-order")
 @Produces("application/json")
-class WaitingRoomEndpoint(@Context override val servletContext: ServletContext) : Endpoint {
+class PaymentOrderEndpoint(@Context override val servletContext: ServletContext) : Endpoint {
     @POST
     @Path("/transfer")
     fun receivePaymentRequest(request: ReceivePaymentRequest): ReceivePaymentResponse {
-        val waitingRoom = applicationContext()
-            .waitingRoomServiceBean()
+        val paymentOrder = applicationContext()
+            .paymentOrderServiceBean()
             .receivePaymentRequest(request.fromAccountId, request.toAccountId, request.amount)
-        return ReceivePaymentResponse(waitingRoom.id)
+        return ReceivePaymentResponse(paymentOrder.id)
     }
 
     @POST
     @Path("/top-up")
     fun topUp(request: TopUpRequest): ReceivePaymentResponse {
-        val waitingRoom = applicationContext()
-            .waitingRoomServiceBean()
+        val paymentOrder = applicationContext()
+            .paymentOrderServiceBean()
             .topUpRequest(request.accountId, request.amount)
-        return ReceivePaymentResponse(waitingRoom.id)
+        return ReceivePaymentResponse(paymentOrder.id)
     }
 
     @POST
     @Path("/withdrawal")
     fun withdrawal(request: WithdrawalRequest): ReceivePaymentResponse {
-        val waitingRoom = applicationContext()
-            .waitingRoomServiceBean()
+        val paymentOrder = applicationContext()
+            .paymentOrderServiceBean()
             .withdrawalRequest(request.accountId, request.amount)
-        return ReceivePaymentResponse(waitingRoom.id)
+        return ReceivePaymentResponse(paymentOrder.id)
     }
 
     @GET
     @Path("{id}/state")
-    fun waitingRoomState(@PathParam("id") id: Int): WaitingRoomStateResponse {
+    fun paymentOrderState(@PathParam("id") id: Int): PaymentOrderStateResponse {
         val state = applicationContext()
-            .waitingRoomServiceBean()
-            .waitingRoomState(id)
-        return WaitingRoomStateResponse(state.name)
+            .paymentOrderServiceBean()
+            .paymentOrderState(id)
+        return PaymentOrderStateResponse(state.name)
     }
 
     data class TopUpRequest @JsonCreator constructor(
@@ -63,8 +63,8 @@ class WaitingRoomEndpoint(@Context override val servletContext: ServletContext) 
         @JsonProperty("amount") val amount: BigDecimal
     )
 
-    data class ReceivePaymentResponse(val waitingRoomId: Int)
+    data class ReceivePaymentResponse(val paymentOrderId: Int)
 
-    data class WaitingRoomStateResponse(val state: String)
+    data class PaymentOrderStateResponse(val state: String)
 }
 

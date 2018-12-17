@@ -7,7 +7,7 @@ CREATE TABLE account (
   version INTEGER NOT NULL
 );
 
-CREATE TABLE waiting_room (
+CREATE TABLE payment_order (
   id INTEGER AUTO_INCREMENT PRIMARY KEY,
   from_acc_id INTEGER NOT NULL,
   to_acc_id INTEGER NOT NULL,
@@ -20,13 +20,12 @@ CREATE TABLE waiting_room (
 );
 
 CREATE TABLE transaction (
-  wr_id INTEGER NOT NULL,
+  po_id INTEGER NOT NULL,
   from_acc_id INTEGER NOT NULL,
   to_acc_id INTEGER NOT NULL,
   amount DECIMAL NOT NULL,
   date_transacted TIMESTAMP (9) WITH TIME ZONE,
   FOREIGN KEY (from_acc_id) references account(id),
   FOREIGN KEY (to_acc_id) references account(id),
-  FOREIGN KEY (wr_id) references waiting_room(id),
-  PRIMARY KEY (wr_id)
+  PRIMARY KEY (po_id)
 );

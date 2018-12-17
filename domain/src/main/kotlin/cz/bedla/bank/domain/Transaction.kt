@@ -4,7 +4,7 @@ import java.math.BigDecimal
 import java.time.OffsetDateTime
 
 data class Transaction(
-    val waitingRoom: WaitingRoom,
+    val paymentOrder: PaymentOrder,
     val fromAccount: Account,
     val toAccount: Account,
     val amount: BigDecimal,

@@ -1,9 +1,9 @@
 package cz.bedla.bank.service.impl
 
-import cz.bedla.bank.domain.WaitingRoom
+import cz.bedla.bank.domain.PaymentOrder
 import cz.bedla.bank.service.Coordinator
 import cz.bedla.bank.service.Transactor
-import cz.bedla.bank.service.WaitingRoomService
+import cz.bedla.bank.service.PaymentOrderService
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import java.util.concurrent.ExecutorService
@@ -15,7 +15,7 @@ class CoordinatorImpl(
     numWorkers: Int,
     private val initDelaySeconds: Int,
     private val periodSeconds: Int,
-    private val waitingRoomService: WaitingRoomService,
+    private val paymentOrderService: PaymentOrderService,
     private val transactor: Transactor,
     private val poller: ScheduledExecutorService = Executors.newSingleThreadScheduledExecutor(),
     private val workerExecutor: ExecutorService = Executors.newFixedThreadPool(numWorkers)
@@ -26,9 +26,9 @@ class CoordinatorImpl(
         poller.scheduleAtFixedRate(createPoller(), initDelaySeconds.toLong(), periodSeconds.toLong(), TimeUnit.SECONDS)
     }
 
-    private fun createPoller(): WaitingRoomPoller {
-        return WaitingRoomPoller(waitingRoomService) { waitingRoom ->
-            workerExecutor.submit { transactor.process(waitingRoom) }
+    private fun createPoller(): PaymentOrderPoller {
+        return PaymentOrderPoller(paymentOrderService) { paymentOrder ->
+            workerExecutor.submit { transactor.process(paymentOrder) }
         }
     }
 
@@ -51,21 +51,21 @@ class CoordinatorImpl(
         private val logger: Logger = LoggerFactory.getLogger(CoordinatorImpl::class.java)
     }
 
-    class WaitingRoomPoller(
-        private val waitingRoomService: WaitingRoomService,
-        private val processAction: (WaitingRoom) -> Unit
+    class PaymentOrderPoller(
+        private val paymentOrderService: PaymentOrderService,
+        private val processAction: (PaymentOrder) -> Unit
     ) : Runnable {
         override fun run() {
-            logger.info("Polling for new waiting-room requests")
-            val list = waitingRoomService.listWaitingRoomsToProcess()
+            logger.info("Polling for new payment-order requests")
+            val list = paymentOrderService.listItemsToProcess()
             logger.info("Found ${list.size} potential requests to process")
-            for (waitingRoom in list) {
-                processAction(waitingRoom)
+            for (paymentOrder in list) {
+                processAction(paymentOrder)
             }
         }
 
         companion object {
-            private val logger: Logger = LoggerFactory.getLogger(WaitingRoomPoller::class.java)
+            private val logger: Logger = LoggerFactory.getLogger(PaymentOrderPoller::class.java)
         }
     }
 }
