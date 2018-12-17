@@ -18,6 +18,7 @@ import org.junit.jupiter.api.extension.ExtendWith
 import org.junitpioneer.jupiter.TempDirectory
 import java.math.BigDecimal
 import java.nio.file.Path
+import java.time.OffsetDateTime
 import java.util.concurrent.TimeUnit
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
@@ -83,6 +84,42 @@ class IntegrationTest {
             awaitUntilWaitingRoomState(waitingRoomCannotWithdrawalId, "NO_FUNDS")
             assertThat(accountBalance(accountId1)).isEqualTo(50.toBigDecimal())
             assertThat(accountBalance(accountId2)).isEqualTo(40.toBigDecimal())
+
+            val calculateBalance1 = calculateBalance(accountId1)
+            assertThat(calculateBalance1.accountName).isEqualTo("Mr. Foo")
+            assertThat(calculateBalance1.balance).isEqualTo(50.toBigDecimal())
+
+            val calculateBalance2 = calculateBalance(accountId2)
+            assertThat(calculateBalance2.accountName).isEqualTo("Mr. Bar")
+            assertThat(calculateBalance2.balance).isEqualTo(40.toBigDecimal())
+
+            val now = OffsetDateTime.now()
+
+            val transactions1 = transactions(accountId1)
+            assertThat(transactions1).hasSize(2)
+            assertThat(transactions1[0].waitingRoomDateReceived).isAfter(now.minusDays(1))
+            assertThat(transactions1[0].fromAccountName).isEqualTo("<internal top-up>")
+            assertThat(transactions1[0].toAccountName).isEqualTo("Mr. Foo")
+            assertThat(transactions1[0].dateTransacted).isAfter(now.minusDays(1))
+            assertThat(transactions1[0].amount).isEqualTo(100.toBigDecimal())
+            assertThat(transactions1[1].waitingRoomDateReceived).isAfter(now.minusDays(1))
+            assertThat(transactions1[1].fromAccountName).isEqualTo("Mr. Foo")
+            assertThat(transactions1[1].toAccountName).isEqualTo("Mr. Bar")
+            assertThat(transactions1[1].dateTransacted).isAfter(now.minusDays(1))
+            assertThat(transactions1[1].amount).isEqualTo(50.toBigDecimal())
+
+            val transactions2 = transactions(accountId2)
+            assertThat(transactions2).hasSize(2)
+            assertThat(transactions2[0].waitingRoomDateReceived).isAfter(now.minusDays(1))
+            assertThat(transactions2[0].fromAccountName).isEqualTo("Mr. Foo")
+            assertThat(transactions2[0].toAccountName).isEqualTo("Mr. Bar")
+            assertThat(transactions2[0].dateTransacted).isAfter(now.minusDays(1))
+            assertThat(transactions2[0].amount).isEqualTo(50.toBigDecimal())
+            assertThat(transactions2[1].waitingRoomDateReceived).isAfter(now.minusDays(1))
+            assertThat(transactions2[1].fromAccountName).isEqualTo("Mr. Bar")
+            assertThat(transactions2[1].toAccountName).isEqualTo("<internal withdrawal>")
+            assertThat(transactions2[1].dateTransacted).isAfter(now.minusDays(1))
+            assertThat(transactions2[1].amount).isEqualTo(10.toBigDecimal())
         }
     }
 
@@ -90,6 +127,37 @@ class IntegrationTest {
     fun tearDown() {
         applicationContext.stop()
         server.stop()
+    }
+
+    private fun calculateBalance(accountId: Int): AccountBalanceDto {
+        return given()
+            .log().all()
+            .port(server.port)
+            .`when`()
+            .contentType(ContentType.JSON)
+            .get("/api/account/$accountId/calculated-balance")
+            .then()
+            .log().all()
+            .statusCode(200)
+            .extract()
+            .body()
+            .`as`(AccountBalanceDto::class.java)
+    }
+
+    private fun transactions(accountId: Int): List<TransactionDto> {
+        return given()
+            .log().all()
+            .port(server.port)
+            .`when`()
+            .contentType(ContentType.JSON)
+            .get("/api/account/$accountId/transactions")
+            .then()
+            .log().all()
+            .statusCode(200)
+            .extract()
+            .body()
+            .jsonPath()
+            .getList(".", TransactionDto::class.java)
     }
 
     private fun transferMoney(accountId1: Int, accountId2: Int, amount: Int): Int {
@@ -205,5 +273,18 @@ class IntegrationTest {
         @JsonProperty("balance") val balance: BigDecimal,
         @JsonProperty("id") val id: Int,
         @JsonProperty("version") val version: Int
+    )
+
+    data class TransactionDto @JsonCreator constructor(
+        @JsonProperty("waitingRoomDateReceived") val waitingRoomDateReceived: OffsetDateTime,
+        @JsonProperty("fromAccountName") val fromAccountName: String,
+        @JsonProperty("toAccountName") val toAccountName: String,
+        @JsonProperty("dateTransacted") val dateTransacted: OffsetDateTime,
+        @JsonProperty("amount") val amount: BigDecimal
+    )
+
+    data class AccountBalanceDto @JsonCreator constructor(
+        @JsonProperty("accountName") val accountName: String,
+        @JsonProperty("balance") val balance: BigDecimal
     )
 }

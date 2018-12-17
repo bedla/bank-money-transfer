@@ -36,6 +36,10 @@ class ApplicationContextImpl(
         TransactionDaoIml(accountDaoBean(), waitingRoomDaoBean())
     }
 
+    private val transactionService = lazyBean {
+        TransactionServiceImpl(transactionDaoBean(), transactionalBean())
+    }
+
     private val accountService = lazyBean {
         AccountServiceImpl(accountDaoBean(), transactionalBean())
     }
@@ -63,7 +67,6 @@ class ApplicationContextImpl(
             transactionDaoBean(),
             waitingRoomDaoBean(),
             accountDaoBean(),
-            waitingRoomServiceBean(),
             transactionalBean()
         )
     }
@@ -79,6 +82,8 @@ class ApplicationContextImpl(
     override fun accountDaoBean(): AccountDao = accountDao.value
 
     override fun transactionDaoBean(): TransactionDao = transactionDao.value
+
+    override fun transactionServiceBean(): TransactionService = transactionService.value
 
     override fun accountServiceBean(): AccountService = accountService.value
 

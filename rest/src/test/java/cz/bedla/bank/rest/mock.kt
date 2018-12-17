@@ -16,6 +16,8 @@ internal class MockApplicationContext : ApplicationContext {
 
     private val transactionDao = mock(TransactionDao::class.java)
 
+    private val transactionService = mock(TransactionService::class.java)
+
     private val accountService = mock(AccountService::class.java)
 
     private val transactional = mock(Transactional::class.java)
@@ -35,6 +37,8 @@ internal class MockApplicationContext : ApplicationContext {
     override fun accountDaoBean(): AccountDao = accountDao
 
     override fun transactionDaoBean(): TransactionDao = transactionDao
+
+    override fun transactionServiceBean(): TransactionService = transactionService
 
     override fun accountServiceBean(): AccountService = accountService
 

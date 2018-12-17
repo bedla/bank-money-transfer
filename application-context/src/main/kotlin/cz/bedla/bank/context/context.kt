@@ -10,6 +10,7 @@ interface ApplicationContext {
     fun accountServiceBean(): AccountService
     fun accountDaoBean(): AccountDao
     fun transactionDaoBean(): TransactionDao
+    fun transactionServiceBean(): TransactionService
     fun transactionalBean(): Transactional
     fun databaseBean(): Database
     fun coordinatorBean(): Coordinator

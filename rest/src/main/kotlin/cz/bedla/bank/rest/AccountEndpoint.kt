@@ -2,6 +2,9 @@ package cz.bedla.bank.rest
 
 import com.fasterxml.jackson.annotation.JsonCreator
 import com.fasterxml.jackson.annotation.JsonProperty
+import cz.bedla.bank.domain.Account
+import cz.bedla.bank.domain.AccountType
+import cz.bedla.bank.domain.Transaction
 import java.math.BigDecimal
 import java.time.OffsetDateTime
 import javax.servlet.ServletContext
@@ -23,11 +26,32 @@ class AccountEndpoint(@Context override val servletContext: ServletContext) : En
     @GET
     @Path("/{id}")
     fun accountInfo(@PathParam("id") id: Int): AccountInfo {
-        val account = applicationContext()
-            .accountServiceBean()
-            .findAccount(id)
+        val account = findAccount(id)
         return AccountInfo(account.type.name, account.name, account.dateOpened, account.balance, account.id)
     }
+
+    @GET
+    @Path("/{id}/calculated-balance")
+    fun calculateBalance(@PathParam("id") id: Int): AccountBalanceResponse {
+        val account = findAccount(id)
+        val balance = applicationContext()
+            .transactionServiceBean()
+            .calculateBalance(account)
+        return AccountBalanceResponse(account.name, balance)
+    }
+
+
+    @GET
+    @Path("/{id}/transactions")
+    fun transactions(@PathParam("id") id: Int): List<TransactionResponse> {
+        val account = findAccount(id)
+        val list = applicationContext()
+            .transactionServiceBean()
+            .findAccountTransactions(account)
+        return list.map { it.toTransactionResponse() }
+    }
+
+    private fun findAccount(id: Int) = applicationContext().accountServiceBean().findAccount(id)
 
     data class CreateAccount @JsonCreator constructor(
         @JsonProperty("name") val name: String
@@ -40,5 +64,31 @@ class AccountEndpoint(@Context override val servletContext: ServletContext) : En
         val balance: BigDecimal,
         val id: Int
     )
+
+    data class AccountBalanceResponse(val accountName: String, val balance: BigDecimal)
+
+    data class TransactionResponse(
+        val waitingRoomDateReceived: OffsetDateTime,
+        val fromAccountName: String,
+        val toAccountName: String,
+        val amount: BigDecimal,
+        val dateTransacted: OffsetDateTime
+    )
+
+    private fun Transaction.toTransactionResponse(): TransactionResponse {
+        fun Account.safeName(): String = when (type) {
+            AccountType.PERSONAL -> name
+            AccountType.WITHDRAWAL -> "<internal withdrawal>"
+            AccountType.TOP_UP -> "<internal top-up>"
+        }
+
+        return TransactionResponse(
+            waitingRoom.dateCreated,
+            fromAccount.safeName(),
+            toAccount.safeName(),
+            amount,
+            dateTransacted
+        )
+    }
 }
 
