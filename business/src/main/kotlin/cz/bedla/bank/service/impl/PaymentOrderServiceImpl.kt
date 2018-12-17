@@ -102,10 +102,10 @@ class PaymentOrderServiceImpl(
             throw InvalidTopUpRequest(it.id)
         }
 
-    private inline fun <T> Account.withPersonalAccountOnly(block: (Account) -> T, elseBlock: (Account) -> Nothing): T =
+    private inline fun <T> Account.withPersonalAccountOnly(block: (Account) -> T, elseThrowBlock: (Account) -> Nothing): T =
         if (type == AccountType.PERSONAL) {
             block(this)
         } else {
-            elseBlock(this)
+            elseThrowBlock(this)
         }
 }

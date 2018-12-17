@@ -231,6 +231,19 @@ class PaymentOrderServiceImplTest {
         }
     }
 
+    @Test
+    fun `List items to process`() {
+        val paymentOrderDao = mock<PaymentOrderDao> {
+            on { findItemsWithState(any()) } doReturn listOf()
+        }
+
+        val fixture = PaymentOrderServiceImpl(paymentOrderDao, mock(), transactional)
+        assertThat(fixture.listItemsToProcess()).isEmpty()
+
+        verify(paymentOrderDao).findItemsWithState(eq(PaymentOrderState.RECEIVED))
+        verifyNoMoreInteractions(paymentOrderDao)
+    }
+
     private fun paymentOrder(state: PaymentOrderState) = PaymentOrder(
         account(AccountType.PERSONAL),
         account(AccountType.PERSONAL),
