@@ -2,7 +2,10 @@ package cz.bedla.bank.service.impl
 
 import cz.bedla.bank.DatabaseImpl
 import cz.bedla.bank.DbInitializer
-import cz.bedla.bank.domain.*
+import cz.bedla.bank.domain.Account
+import cz.bedla.bank.domain.AccountType
+import cz.bedla.bank.domain.WaitingRoom
+import cz.bedla.bank.domain.WaitingRoomState
 import cz.bedla.bank.service.AccountDao
 import cz.bedla.bank.service.WaitingRoomDao
 import cz.bedla.bank.tx.TransactionalImpl
@@ -24,12 +27,14 @@ class TransactionDaoImlTest {
     private lateinit var waitingRoomDao: WaitingRoomDao
 
     private lateinit var database: DatabaseImpl
+    private lateinit var transactional: TransactionalImpl
 
     @BeforeEach
     fun setUp(@TempDirectory.TempDir tempDir: Path) {
         database = DatabaseImpl(tempDir.toFile())
         database.start()
         DbInitializer("database.sql", database.dataSource).run()
+        transactional = TransactionalImpl(database.dataSource)
 
         accountDao = AccountDaoImpl()
         waitingRoomDao = WaitingRoomDaoImpl(accountDao)
@@ -37,7 +42,7 @@ class TransactionDaoImlTest {
     }
 
     @Test
-    fun store() = TransactionalImpl(database.dataSource).run {
+    fun store() = transactional.run {
         val fromAccount = accountDao.createAccount(
             Account(AccountType.TOP_UP, "bank top-up", OffsetDateTime.now(), 999999.toBigDecimal())
         )
@@ -49,8 +54,7 @@ class TransactionDaoImlTest {
             WaitingRoom(fromAccount, toAccount, 5.toBigDecimal(), WaitingRoomState.RECEIVED, OffsetDateTime.now())
         )
 
-        val transaction =
-            fixture.create(Transaction(waitingRoom, fromAccount, toAccount, 100.toBigDecimal(), OffsetDateTime.now()))
+        fixture.create(waitingRoom.id, fromAccount.id, toAccount.id, 100.toBigDecimal(), OffsetDateTime.now())
 
         val list = fixture.findAccountTransactions(fromAccount)
         assertThat(list).hasSize(1)
@@ -80,9 +84,9 @@ class TransactionDaoImlTest {
 
         assertThat(fixture.calculateBalance(mainAccount)).isEqualTo(0.toBigDecimal())
 
-        fixture.create(Transaction(waitingRoom1, account1, mainAccount, 100.toBigDecimal(), OffsetDateTime.now()))
-        fixture.create(Transaction(waitingRoom2, account1, mainAccount, 200.toBigDecimal(), OffsetDateTime.now()))
-        fixture.create(Transaction(waitingRoom3, mainAccount, account2, 50.toBigDecimal(), OffsetDateTime.now()))
+        fixture.create(waitingRoom1.id, account1.id, mainAccount.id, 100.toBigDecimal(), OffsetDateTime.now())
+        fixture.create(waitingRoom2.id, account1.id, mainAccount.id, 200.toBigDecimal(), OffsetDateTime.now())
+        fixture.create(waitingRoom3.id, mainAccount.id, account2.id, 50.toBigDecimal(), OffsetDateTime.now())
 
         assertThat(fixture.calculateBalance(mainAccount)).isEqualTo(250.toBigDecimal())
     }
@@ -111,16 +115,16 @@ class TransactionDaoImlTest {
         assertThat(fixture.calculateBalance(mainAccount)).isEqualTo(0.toBigDecimal())
 
         fixture.create(
-            Transaction(waitingRoom1, account1, mainAccount, 100.toBigDecimal(), OffsetDateTime.now().minusDays(3))
+            waitingRoom1.id, account1.id, mainAccount.id, 100.toBigDecimal(), OffsetDateTime.now().minusDays(3)
         )
         fixture.create(
-            Transaction(waitingRoom2, account1, mainAccount, 200.toBigDecimal(), OffsetDateTime.now().minusDays(2))
+            waitingRoom2.id, account1.id, mainAccount.id, 200.toBigDecimal(), OffsetDateTime.now().minusDays(2)
         )
         fixture.create(
-            Transaction(waitingRoom3, mainAccount, account2, 300.toBigDecimal(), OffsetDateTime.now().minusDays(1))
+            waitingRoom3.id, mainAccount.id, account2.id, 300.toBigDecimal(), OffsetDateTime.now().minusDays(1)
         )
         fixture.create(
-            Transaction(waitingRoom4, account1, anotherAccount, 123.toBigDecimal(), OffsetDateTime.now())
+            waitingRoom4.id, account1.id, anotherAccount.id, 123.toBigDecimal(), OffsetDateTime.now()
         )
 
         val list = fixture.findAccountTransactions(mainAccount)
@@ -148,10 +152,10 @@ class TransactionDaoImlTest {
 
             val waitingRoom = createFakeWaitingRoom(account1)
 
-            fixture.create(Transaction(waitingRoom, account1, account2, 100.toBigDecimal(), OffsetDateTime.now()))
+            fixture.create(waitingRoom.id, account1.id, account2.id, 100.toBigDecimal(), OffsetDateTime.now())
 
             assertThatThrownBy {
-                fixture.create(Transaction(waitingRoom, account1, account2, 200.toBigDecimal(), OffsetDateTime.now()))
+                fixture.create(waitingRoom.id, account1.id, account2.id, 200.toBigDecimal(), OffsetDateTime.now())
             }.isInstanceOf(DataAccessException::class.java)
                 .hasMessageContaining("Unique index or primary key violation")
         }

@@ -10,24 +10,31 @@ import cz.bedla.bank.service.WaitingRoomDao
 import cz.bedla.bank.service.createDsl
 import org.jooq.impl.DSL.sum
 import java.math.BigDecimal
+import java.time.OffsetDateTime
 
 class TransactionDaoIml(
     private val accountDao: AccountDao,
     private val waitingRoomDao: WaitingRoomDao
 ) : TransactionDao {
-    override fun create(item: Transaction): Transaction {
+    override fun create(
+        waitingRoomId: Int,
+        fromAccountId: Int,
+        toAccountId: Int,
+        amount: BigDecimal,
+        dateTransacted: OffsetDateTime
+    ): Transaction {
         val dsl = createDsl()
 
         val transactionRecord = dsl.newRecord(TRANSACTION)
-        transactionRecord.wrId = item.waitingRoom.id
-        transactionRecord.fromAccId = item.fromAccount.id
-        transactionRecord.toAccId = item.toAccount.id
-        transactionRecord.amount = item.amount
-        transactionRecord.dateTransacted = item.dateTransacted
+        transactionRecord.wrId = waitingRoomId
+        transactionRecord.fromAccId = fromAccountId
+        transactionRecord.toAccId = toAccountId
+        transactionRecord.amount = amount
+        transactionRecord.dateTransacted = dateTransacted
 
         transactionRecord.store()
 
-        return item
+        return transactionRecord.toTransaction(accountDao, waitingRoomDao)
     }
 
     override fun calculateBalance(account: Account): BigDecimal {
