@@ -26,7 +26,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import static org.apache.commons.lang3.Validate.*;
 
 public final class RestServer {
-    private static final Logger LOG = LoggerFactory.getLogger(RestServer.class);
+    private static final Logger logger = LoggerFactory.getLogger(RestServer.class);
 
     private final String host;
     private final int requestedPort;
@@ -47,7 +47,7 @@ public final class RestServer {
     public void start() {
         if (serverReference.compareAndSet(null, new LazyServer(host, requestedPort, servletContextListener, applicationClass))) {
             final Undertow undertow = serverReference.get().getServer();
-            LOG.info("Starting server");
+            logger.info("Starting server");
             undertow.start();
         } else {
             throw new IllegalStateException("Server already started");
@@ -57,7 +57,7 @@ public final class RestServer {
     public void stop() {
         final LazyServer lazyServer = serverReference.getAndSet(null);
         validState(lazyServer != null, "Unable to stop stopped server");
-        LOG.info("Stopping server");
+        logger.info("Stopping server");
         lazyServer.getServer().stop();
     }
 
@@ -90,7 +90,7 @@ public final class RestServer {
             this.applicationClass = applicationClass;
         }
 
-        public Undertow getServer() {
+        private Undertow getServer() {
             try {
                 return get();
             } catch (ConcurrentException e) {
@@ -100,8 +100,8 @@ public final class RestServer {
 
         @Override
         protected Undertow initialize() throws ConcurrentException {
-            LOG.info("Creating server");
-            DeploymentInfo servletBuilder = Servlets.deployment()
+            logger.info("Creating server");
+            final DeploymentInfo servletBuilder = Servlets.deployment()
                     .setClassLoader(RestServer.class.getClassLoader())
                     .setContextPath("/api")
                     .setDeploymentName("bank.war")
@@ -112,19 +112,21 @@ public final class RestServer {
                                     .addMapping("/*"))
                     .addDeploymentCompleteListener(servletContextListener);
 
-            DeploymentManager manager = Servlets.defaultContainer().addDeployment(servletBuilder);
+            final DeploymentManager manager = Servlets.defaultContainer().addDeployment(servletBuilder);
             manager.deploy();
-            PathHandler path = null;
-            try {
-                path = Handlers.path(Handlers.redirect("/api")).addPrefixPath("/api", manager.start());
-            } catch (ServletException e) {
-                ExceptionUtils.rethrow(e);
-            }
 
             return Undertow.builder()
                     .addHttpListener(requestedPort, host)
-                    .setHandler(path)
+                    .setHandler(pathHandler(manager))
                     .build();
+        }
+
+        private PathHandler pathHandler(DeploymentManager manager) {
+            try {
+                return Handlers.path(Handlers.redirect("/api")).addPrefixPath("/api", manager.start());
+            } catch (ServletException e) {
+                return ExceptionUtils.rethrow(e);
+            }
         }
     }
 }

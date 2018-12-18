@@ -15,7 +15,7 @@ class RestServerTest {
     private RestServer fixture = new RestServer("localhost", 0, new DummyServletContextListener(), FooApplication.class);
 
     @Test
-    void startStopStart() throws InterruptedException {
+    void startStopStart() {
         assertThat(fixture.isRunning()).isFalse();
         fixture.start();
         assertThat(fixture.isRunning()).isTrue();
@@ -26,7 +26,7 @@ class RestServerTest {
     }
 
     @Test
-    void doubleStart() throws InterruptedException {
+    void doubleStart() {
         fixture.start();
         assertThatThrownBy(() -> fixture.start())
                 .isInstanceOf(IllegalStateException.class)
