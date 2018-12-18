@@ -39,7 +39,6 @@ public final class TransactionalImpl implements Transactional {
         try (final Connection connection = obtainConnection()) {
             try {
                 ConnectionHolder.setConnection(connection);
-                disableAutoCommit();
 
                 T result;
                 try {
@@ -67,14 +66,6 @@ public final class TransactionalImpl implements Transactional {
             return dataSource.getConnection();
         } catch (SQLException e) {
             return ExceptionUtils.rethrow(e);
-        }
-    }
-
-    private void disableAutoCommit() {
-        try {
-            Transactional.currentConnection().setAutoCommit(false);
-        } catch (SQLException e) {
-            ExceptionUtils.rethrow(e);
         }
     }
 

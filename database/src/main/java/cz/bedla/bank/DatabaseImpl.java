@@ -48,6 +48,8 @@ public final class DatabaseImpl implements AutoCloseable, Database {
         dataSource.setJdbcUrl("jdbc:h2:file:" + dbPath() + ";DB_CLOSE_ON_EXIT=FALSE");
         dataSource.setUsername("sa");
         dataSource.setPassword("");
+        dataSource.setAutoCommit(false);
+        dataSource.setTransactionIsolation("TRANSACTION_READ_COMMITTED");
         return dataSource;
     }
 
