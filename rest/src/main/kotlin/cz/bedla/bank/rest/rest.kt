@@ -29,9 +29,9 @@ class ApplicationServletContextListener(
         findApplicationContext().stop()
     }
 
-    fun findApplicationContext(): ApplicationContext = servletContext.getAttribute(APPLICATION) as ApplicationContext
+    private fun findApplicationContext(): ApplicationContext = servletContext.getAttribute(APPLICATION) as ApplicationContext
 
     companion object {
-        val APPLICATION = "bank.application"
+        const val APPLICATION = "bank.application"
     }
 }
