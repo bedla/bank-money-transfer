@@ -106,7 +106,8 @@
 
 ## Module undertow-server
 
-- written in Java and inspired by [Spring-Boot](https://spring.io/projects/spring-boot) hot it internally run selected embedded Servlet container
+- written in Java and inspired by [Spring-Boot](https://spring.io/projects/spring-boot) 
+  - how it internally run selected embedded Servlet container
 - wraps [Undertow HTTP server](http://undertow.io/) into `RestServer` class with `.start()` and `.stop()` methods
 - using constructor you can specify:
   - `host` (`localhost` is used as default)
