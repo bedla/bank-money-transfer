@@ -42,7 +42,7 @@ class CoordinatorImplTest {
             on { process(any()) } doAnswer { invocation ->
                 processed.computeIfAbsent(Thread.currentThread().name) { mutableListOf() }
                     .add(invocation.getArgument<PaymentOrder>(0))
-                Unit
+                Transactor.ResultState.MONEY_SENT
             }
         }
 

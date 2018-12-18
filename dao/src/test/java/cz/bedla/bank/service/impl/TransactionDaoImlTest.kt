@@ -43,10 +43,10 @@ class TransactionDaoImlTest {
 
     @Test
     fun store() = transactional.run {
-        val fromAccount = accountDao.createAccount(
+        val fromAccount = accountDao.create(
             Account(AccountType.TOP_UP, "bank top-up", OffsetDateTime.now(), 999999.toBigDecimal())
         )
-        val toAccount = accountDao.createAccount(
+        val toAccount = accountDao.create(
             Account(AccountType.PERSONAL, "Mr. Foo", OffsetDateTime.now(), 0.toBigDecimal())
         )
 
@@ -67,14 +67,14 @@ class TransactionDaoImlTest {
 
     @Test
     fun calculateBalance() = TransactionalImpl(database.dataSource).run {
-        val mainAccount = accountDao.createAccount(
+        val mainAccount = accountDao.create(
             Account(AccountType.PERSONAL, "Mr. Foo", OffsetDateTime.now(), 0.toBigDecimal())
         )
 
-        val account1 = accountDao.createAccount(
+        val account1 = accountDao.create(
             Account(AccountType.TOP_UP, "Bank top-up", OffsetDateTime.now(), 1000.toBigDecimal())
         )
-        val account2 = accountDao.createAccount(
+        val account2 = accountDao.create(
             Account(AccountType.WITHDRAWAL, "Bank withdrawal", OffsetDateTime.now(), 1000.toBigDecimal())
         )
 
@@ -93,17 +93,17 @@ class TransactionDaoImlTest {
 
     @Test
     fun findAccountTransactions() = TransactionalImpl(database.dataSource).run {
-        val mainAccount = accountDao.createAccount(
+        val mainAccount = accountDao.create(
             Account(AccountType.PERSONAL, "Mr. Foo", OffsetDateTime.now(), 0.toBigDecimal())
         )
-        val anotherAccount = accountDao.createAccount(
+        val anotherAccount = accountDao.create(
             Account(AccountType.PERSONAL, "Mr. Another", OffsetDateTime.now(), 0.toBigDecimal())
         )
 
-        val account1 = accountDao.createAccount(
+        val account1 = accountDao.create(
             Account(AccountType.TOP_UP, "Bank top-up", OffsetDateTime.now(), 1000.toBigDecimal())
         )
-        val account2 = accountDao.createAccount(
+        val account2 = accountDao.create(
             Account(AccountType.WITHDRAWAL, "Bank withdrawal", OffsetDateTime.now(), 1000.toBigDecimal())
         )
 
@@ -143,10 +143,10 @@ class TransactionDaoImlTest {
     @Test
     fun duplicatePaymentOrder() {
         TransactionalImpl(database.dataSource).run {
-            val account1 = accountDao.createAccount(
+            val account1 = accountDao.create(
                 Account(AccountType.TOP_UP, "Bank top-up", OffsetDateTime.now(), 1000.toBigDecimal())
             )
-            val account2 = accountDao.createAccount(
+            val account2 = accountDao.create(
                 Account(AccountType.WITHDRAWAL, "Bank withdrawal", OffsetDateTime.now(), 1000.toBigDecimal())
             )
 

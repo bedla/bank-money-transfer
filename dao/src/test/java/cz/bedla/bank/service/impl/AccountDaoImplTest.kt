@@ -33,7 +33,7 @@ class AccountDaoImplTest {
     @Test
     fun storeAndFetch() {
         TransactionalImpl(database.dataSource).run {
-            val account = fixture.createAccount(
+            val account = fixture.create(
                 Account(AccountType.PERSONAL, "foo", OffsetDateTime.now(), 123.4.toBigDecimal())
             )
             assertThat(account.id).isGreaterThan(0)
@@ -51,7 +51,7 @@ class AccountDaoImplTest {
     @Test
     fun updateBalance() {
         TransactionalImpl(database.dataSource).run {
-            val account = fixture.createAccount(
+            val account = fixture.create(
                 Account(AccountType.PERSONAL, "lock", OffsetDateTime.now(), 123.4.toBigDecimal())
             )
 
@@ -66,10 +66,10 @@ class AccountDaoImplTest {
     @Test
     fun findAll() {
         TransactionalImpl(database.dataSource).run {
-            fixture.createAccount(
+            fixture.create(
                 Account(AccountType.PERSONAL, "Afoo", OffsetDateTime.now(), 123.toBigDecimal())
             )
-            fixture.createAccount(
+            fixture.create(
                 Account(AccountType.TOP_UP, "Bbar", OffsetDateTime.now(), 456.toBigDecimal())
             )
 
@@ -89,13 +89,13 @@ class AccountDaoImplTest {
     @Test
     fun findByType() {
         TransactionalImpl(database.dataSource).run {
-            fixture.createAccount(
+            fixture.create(
                 Account(AccountType.PERSONAL, "Afoo", OffsetDateTime.now(), 123.toBigDecimal())
             )
-            fixture.createAccount(
+            fixture.create(
                 Account(AccountType.TOP_UP, "Bbar", OffsetDateTime.now(), 456.toBigDecimal())
             )
-            fixture.createAccount(
+            fixture.create(
                 Account(AccountType.TOP_UP, "Cbar", OffsetDateTime.now(), 789.toBigDecimal())
             )
 

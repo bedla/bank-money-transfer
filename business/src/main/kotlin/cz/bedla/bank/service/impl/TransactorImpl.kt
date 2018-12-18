@@ -4,9 +4,9 @@ import cz.bedla.bank.domain.AccountType
 import cz.bedla.bank.domain.PaymentOrder
 import cz.bedla.bank.domain.PaymentOrderState
 import cz.bedla.bank.service.AccountDao
+import cz.bedla.bank.service.PaymentOrderDao
 import cz.bedla.bank.service.TransactionDao
 import cz.bedla.bank.service.Transactor
-import cz.bedla.bank.service.PaymentOrderDao
 import cz.bedla.bank.tx.Transactional
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
@@ -21,18 +21,16 @@ class TransactorImpl(
 ) : Transactor {
     private val running = AtomicBoolean()
 
-    override fun process(paymentOrder: PaymentOrder) {
-        if (!running.get()) {
+    override fun process(paymentOrder: PaymentOrder): Transactor.ResultState = when {
+        !running.get() -> {
             logger.info("PaymentOrder.id=${paymentOrder.id} - transactor not running, skipping.")
-            return
+            Transactor.ResultState.STOPPED
         }
-
-        if (checkPaymentOrderReceived(paymentOrder)) {
+        checkPaymentOrderReceived(paymentOrder) -> {
             logger.info("PaymentOrder.id=${paymentOrder.id} - already processed (heavy-load?), skipping.")
-            return
+            Transactor.ResultState.INVALID_STATE
         }
-
-        trySendMoney(paymentOrder)
+        else -> trySendMoney(paymentOrder)
     }
 
     private fun checkPaymentOrderReceived(paymentOrder: PaymentOrder) = transactional.execute {
@@ -46,10 +44,11 @@ class TransactorImpl(
         return fromAccount.type == AccountType.PERSONAL && fromAccount.balance < paymentOrder.amount
     }
 
-    private fun trySendMoney(paymentOrder: PaymentOrder) = transactional.run {
+    private fun trySendMoney(paymentOrder: PaymentOrder) = transactional.execute {
         if (isPersonalAccountWithoutFunds(paymentOrder)) {
             logger.info("PaymentOrder.id=${paymentOrder.id} - from account.id=${paymentOrder.fromAccount.id} does not have enough funds.")
             paymentOrderDao.updateState(paymentOrder.copy(state = PaymentOrderState.NO_FUNDS))
+            Transactor.ResultState.NO_FUNDS
         } else {
             val fromAccount = paymentOrder.fromAccount
             val toAccount = paymentOrder.toAccount
@@ -70,6 +69,7 @@ class TransactorImpl(
 
             logger.info("PaymentOrder.id=${paymentOrder.id} - state updated to ${PaymentOrderState.OK}, commit...")
             paymentOrderDao.updateState(paymentOrder.copy(state = PaymentOrderState.OK))
+            Transactor.ResultState.MONEY_SENT
         }
     }
 

@@ -9,7 +9,7 @@ import org.jooq.Record
 
 
 class AccountDaoImpl() : AccountDao {
-    override fun createAccount(account: Account): Account {
+    override fun create(account: Account): Account {
         val dsl = createDsl()
 
         val accountRecord = dsl.newRecord(ACCOUNT)

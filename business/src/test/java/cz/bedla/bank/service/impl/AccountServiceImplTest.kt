@@ -17,7 +17,7 @@ class AccountServiceImplTest {
         @Test
         fun `business`() {
             val accountDao = mock<AccountDao> {
-                on { createAccount(any()) } doAnswer returnsFirstArg()
+                on { create(any()) } doAnswer returnsFirstArg()
             }
             val fixture = AccountServiceImpl(accountDao, transactional)
 
@@ -26,7 +26,7 @@ class AccountServiceImplTest {
             assertThat(account.name).isEqualTo("Mr. Foo")
             assertThat(account.balance).isEqualTo(0.toBigDecimal())
 
-            verify(accountDao).createAccount(any())
+            verify(accountDao).create(any())
             verifyNoMoreInteractions(accountDao)
         }
 
@@ -46,7 +46,7 @@ class AccountServiceImplTest {
         @Test
         fun `business`() {
             val accountDao = mock<AccountDao> {
-                on { createAccount(any()) } doAnswer returnsFirstArg()
+                on { create(any()) } doAnswer returnsFirstArg()
             }
             val fixture = AccountServiceImpl(accountDao, transactional)
 
@@ -55,7 +55,7 @@ class AccountServiceImplTest {
             assertThat(account.name).isEqualTo("Bank top-up")
             assertThat(account.balance).isEqualTo(999.toBigDecimal())
 
-            verify(accountDao).createAccount(any())
+            verify(accountDao).create(any())
             verifyNoMoreInteractions(accountDao)
         }
 
@@ -75,7 +75,7 @@ class AccountServiceImplTest {
         @Test
         fun `business`() {
             val accountDao = mock<AccountDao> {
-                on { createAccount(any()) } doAnswer returnsFirstArg()
+                on { create(any()) } doAnswer returnsFirstArg()
             }
             val fixture = AccountServiceImpl(accountDao, transactional)
 
@@ -84,7 +84,7 @@ class AccountServiceImplTest {
             assertThat(account.name).isEqualTo("Bank withdrawal")
             assertThat(account.balance).isEqualTo(999.toBigDecimal())
 
-            verify(accountDao).createAccount(any())
+            verify(accountDao).create(any())
             verifyNoMoreInteractions(accountDao)
         }
 

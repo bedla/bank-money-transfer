@@ -70,9 +70,9 @@ class PaymentOrderDaoImplTest {
     @Test
     fun findItemsWithState() {
         TransactionalImpl(database.dataSource).run {
-            val fromAccount = accountDao.createAccount(
+            val fromAccount = accountDao.create(
                     Account(AccountType.TOP_UP, "bank top-up", OffsetDateTime.now(), 999999.toBigDecimal()))
-            val toAccount = accountDao.createAccount(
+            val toAccount = accountDao.create(
                     Account(AccountType.PERSONAL, "Mr. Foo", OffsetDateTime.now(), 0.toBigDecimal()))
 
             fixture.create(PaymentOrder(fromAccount, toAccount, 1.toBigDecimal(), PaymentOrderState.RECEIVED, OffsetDateTime.now().minusDays(2)))
@@ -96,11 +96,11 @@ class PaymentOrderDaoImplTest {
     @Test
     fun findItemsForAccount() {
         TransactionalImpl(database.dataSource).run {
-            val account1 = accountDao.createAccount(
+            val account1 = accountDao.create(
                     Account(AccountType.TOP_UP, "bank top-up", OffsetDateTime.now(), 999999.toBigDecimal()))
-            val account2 = accountDao.createAccount(
+            val account2 = accountDao.create(
                     Account(AccountType.PERSONAL, "Mr. Foo", OffsetDateTime.now(), 0.toBigDecimal()))
-            val account3 = accountDao.createAccount(
+            val account3 = accountDao.create(
                     Account(AccountType.PERSONAL, "Mr. Bar", OffsetDateTime.now(), 0.toBigDecimal()))
 
             fixture.create(PaymentOrder(account1, account2, 1.toBigDecimal(), PaymentOrderState.RECEIVED, OffsetDateTime.now().minusDays(2)))
@@ -175,9 +175,9 @@ class PaymentOrderDaoImplTest {
     }
 
     private fun createPaymentOrder(): PaymentOrder {
-        val fromAccount = accountDao.createAccount(
+        val fromAccount = accountDao.create(
                 Account(AccountType.TOP_UP, "bank top-up", OffsetDateTime.now(), 999999.toBigDecimal()))
-        val toAccount = accountDao.createAccount(
+        val toAccount = accountDao.create(
                 Account(AccountType.PERSONAL, "Mr. Foo", OffsetDateTime.now(), 0.toBigDecimal()))
 
         return fixture.create(PaymentOrder(fromAccount, toAccount, 100.toBigDecimal(), PaymentOrderState.RECEIVED, OffsetDateTime.now()))

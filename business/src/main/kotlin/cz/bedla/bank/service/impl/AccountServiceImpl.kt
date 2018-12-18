@@ -15,17 +15,17 @@ class AccountServiceImpl(
 ) : AccountService {
     override fun createPersonalAccount(name: String): Account = transactional.execute {
         require(name.isNotBlank()) { "Account name cannot be empty" }
-        accountDao.createAccount(Account(AccountType.PERSONAL, name, OffsetDateTime.now(), 0.toBigDecimal()))
+        accountDao.create(Account(AccountType.PERSONAL, name, OffsetDateTime.now(), 0.toBigDecimal()))
     }
 
     override fun createTopUpAccount(name: String, amount: BigDecimal): Account = transactional.execute {
         require(name.isNotBlank()) { "Account name cannot be empty" }
-        accountDao.createAccount(Account(AccountType.TOP_UP, name, OffsetDateTime.now(), amount))
+        accountDao.create(Account(AccountType.TOP_UP, name, OffsetDateTime.now(), amount))
     }
 
     override fun createWithdrawalAccount(name: String, amount: BigDecimal): Account = transactional.execute {
         require(name.isNotBlank()) { "Account name cannot be empty" }
-        accountDao.createAccount(Account(AccountType.WITHDRAWAL, name, OffsetDateTime.now(), amount))
+        accountDao.create(Account(AccountType.WITHDRAWAL, name, OffsetDateTime.now(), amount))
     }
 
     override fun findAccount(id: Int): Account = transactional.execute {
