@@ -1,4 +1,4 @@
-#Spring Boot like money-transfer application without Spring
+# Spring Boot like money-transfer application without Spring
 
 **Assignment:** Create REST application for sending money between accounts without full-blown frameworks like [Spring](https://spring.io/projects/spring-framework). 
 
