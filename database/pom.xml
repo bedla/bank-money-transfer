@@ -76,7 +76,7 @@
                             <regex>\\</regex>
                             <replacement>\\\\</replacement>
                             <name>projectBasedir</name>
-                            <failIfNoMatch>true</failIfNoMatch>
+                            <failIfNoMatch>false</failIfNoMatch>
                         </configuration>
                     </execution>
                 </executions>
