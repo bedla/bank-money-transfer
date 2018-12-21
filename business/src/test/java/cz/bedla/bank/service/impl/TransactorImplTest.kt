@@ -46,6 +46,30 @@ class TransactorImplTest {
     }
 
     @Test
+    fun optimisticLockVersionCollision() {
+        val account1 = createTopUpAccount()
+        val account2 = createPersonalAccount("Mr. Bar", 1000)
+
+        val paymentOrder: PaymentOrder = transactional.execute {
+            paymentOrderDao.create(
+                paymentOrder(
+                    fromAccount = account1,
+                    toAccount = account2,
+                    state = PaymentOrderState.RECEIVED,
+                    amount = 999
+                )
+            )
+        }
+
+        // process transaction as usual
+        fixture.process(paymentOrder, true)
+        // process with same payment-order (version)
+        assertThatThrownBy { fixture.process(paymentOrder, false) }
+            .isInstanceOf(DataChangedException::class.java)
+            .hasMessage("Database record has been changed or doesn't exist any longer")
+    }
+
+    @Test
     fun doNotTransferWhenDbStateChanged() {
         val account1 = createTopUpAccount()
         val account2 = createPersonalAccount("Mr. Bar", 1000)

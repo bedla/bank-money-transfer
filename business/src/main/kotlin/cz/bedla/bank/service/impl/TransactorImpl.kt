@@ -21,17 +21,18 @@ class TransactorImpl(
 ) : Transactor {
     private val running = AtomicBoolean()
 
-    override fun process(paymentOrder: PaymentOrder): Transactor.ResultState = when {
-        !running.get() -> {
-            logger.info("PaymentOrder.id=${paymentOrder.id} - transactor not running, skipping.")
-            Transactor.ResultState.STOPPED
+    override fun process(paymentOrder: PaymentOrder, enableCheckPaymentOrderReceived: Boolean): Transactor.ResultState =
+        when {
+            !running.get() -> {
+                logger.info("PaymentOrder.id=${paymentOrder.id} - transactor not running, skipping.")
+                Transactor.ResultState.STOPPED
+            }
+            enableCheckPaymentOrderReceived && checkPaymentOrderReceived(paymentOrder) -> {
+                logger.info("PaymentOrder.id=${paymentOrder.id} - already processed (heavy-load?), skipping.")
+                Transactor.ResultState.INVALID_STATE
+            }
+            else -> trySendMoney(paymentOrder)
         }
-        checkPaymentOrderReceived(paymentOrder) -> {
-            logger.info("PaymentOrder.id=${paymentOrder.id} - already processed (heavy-load?), skipping.")
-            Transactor.ResultState.INVALID_STATE
-        }
-        else -> trySendMoney(paymentOrder)
-    }
 
     private fun checkPaymentOrderReceived(paymentOrder: PaymentOrder) = transactional.execute {
         (paymentOrderDao.findPaymentOrder(paymentOrder.id)

@@ -5,8 +5,8 @@ import cz.bedla.bank.domain.Transaction
 import cz.bedla.bank.jooq.Tables.TRANSACTION
 import cz.bedla.bank.jooq.tables.records.TransactionRecord
 import cz.bedla.bank.service.AccountDao
-import cz.bedla.bank.service.TransactionDao
 import cz.bedla.bank.service.PaymentOrderDao
+import cz.bedla.bank.service.TransactionDao
 import cz.bedla.bank.service.createDsl
 import org.jooq.impl.DSL.sum
 import java.math.BigDecimal
@@ -25,16 +25,22 @@ class TransactionDaoIml(
     ): Transaction {
         val dsl = createDsl()
 
-        val transactionRecord = dsl.newRecord(TRANSACTION)
-        transactionRecord.poId = paymentOrderId
-        transactionRecord.fromAccId = fromAccountId
-        transactionRecord.toAccId = toAccountId
-        transactionRecord.amount = amount
-        transactionRecord.dateTransacted = dateTransacted
+        // for testing change of VERSION (otherwise transaction.PK fails on duplicate value)
+        val old = dsl.selectFrom(TRANSACTION).where(TRANSACTION.PO_ID.eq(paymentOrderId)).fetchOne()
+        return if (old == null) {
+            val transactionRecord = dsl.newRecord(TRANSACTION)
+            transactionRecord.poId = paymentOrderId
+            transactionRecord.fromAccId = fromAccountId
+            transactionRecord.toAccId = toAccountId
+            transactionRecord.amount = amount
+            transactionRecord.dateTransacted = dateTransacted
 
-        transactionRecord.store()
+            transactionRecord.store()
 
-        return transactionRecord.toTransaction(accountDao, paymentOrderDao)
+            transactionRecord.toTransaction(accountDao, paymentOrderDao)
+        } else {
+            old.toTransaction(accountDao, paymentOrderDao);
+        }
     }
 
     override fun calculateBalance(account: Account): BigDecimal {
