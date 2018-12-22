@@ -12,6 +12,7 @@ import cz.bedla.bank.tx.Transactional
 import cz.bedla.bank.tx.TransactionalImpl
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
+import org.awaitility.Awaitility.await
 import org.jooq.exception.DataChangedException
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
@@ -21,9 +22,8 @@ import org.junit.jupiter.api.extension.ExtendWith
 import org.junitpioneer.jupiter.TempDirectory
 import java.nio.file.Path
 import java.time.OffsetDateTime
-import java.util.concurrent.CountDownLatch
-import java.util.concurrent.Executors
-import java.util.concurrent.TimeUnit
+import java.util.concurrent.*
+import java.util.concurrent.atomic.AtomicInteger
 
 @ExtendWith(TempDirectory::class)
 class TransactorImplTest {
@@ -52,7 +52,21 @@ class TransactorImplTest {
     @RepeatedTest(100)
     fun optimisticLockVersionCollision() {
         val executor = Executors.newFixedThreadPool(2)
-        val beforeLatch = CountDownLatch(1)
+        val beforeLatch = object : CountDownLatch(1) {
+            private val awaitCount = AtomicInteger()
+
+            override fun await() {
+                awaitCount.incrementAndGet()
+                super.await()
+            }
+
+            override fun await(timeout: Long, unit: TimeUnit?): Boolean {
+                awaitCount.incrementAndGet()
+                return super.await(timeout, unit)
+            }
+
+            fun awaitCount(): Int = awaitCount.get()
+        }
         val fixtureConcurrent = TransactorImpl(transactionDao, paymentOrderDao, accountDao, transactional) {
             beforeLatch.await()
         }
@@ -93,10 +107,11 @@ class TransactorImplTest {
             fixtureConcurrent.process(paymentOrder2)
         }
 
-        TimeUnit.MILLISECONDS.sleep(500)
+        await().atMost(5, TimeUnit.SECONDS).until { beforeLatch.awaitCount() == 2 }
         beforeLatch.countDown()
 
-        TimeUnit.MILLISECONDS.sleep(500)
+        awaitForFutures(future1, future2)
+
         executor.shutdown()
         executor.awaitTermination(5, TimeUnit.SECONDS)
 
@@ -136,7 +151,20 @@ class TransactorImplTest {
                 .hasMessageContaining("Database record has been changed or doesn't exist any longer")
             future2.get()
         } else {
-            error("Invalid paymentOrder states $paymentOrder1 and $paymentOrder2")
+            error("Invalid paymentOrder states $paymentOrder1 and $paymentOrder2, ${future1.get()}, ${future2.get()}")
+        }
+    }
+
+    private fun awaitForFutures(future1: Future<*>, future2: Future<*>) {
+        try {
+            future1.get(30, TimeUnit.SECONDS)
+        } catch (e: ExecutionException) {
+            // value will be checked later
+        }
+        try {
+            future2.get(30, TimeUnit.SECONDS)
+        } catch (e: ExecutionException) {
+            // value will be checked later
         }
     }
 
