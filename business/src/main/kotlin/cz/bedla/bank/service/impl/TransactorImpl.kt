@@ -17,17 +17,18 @@ class TransactorImpl(
     private val transactionDao: TransactionDao,
     private val paymentOrderDao: PaymentOrderDao,
     private val accountDao: AccountDao,
-    private val transactional: Transactional
+    private val transactional: Transactional,
+    private val beforeProcessBlock: () -> Unit = {}
 ) : Transactor {
     private val running = AtomicBoolean()
 
-    override fun process(paymentOrder: PaymentOrder, enableCheckPaymentOrderReceived: Boolean): Transactor.ResultState =
+    override fun process(paymentOrder: PaymentOrder): Transactor.ResultState =
         when {
             !running.get() -> {
                 logger.info("PaymentOrder.id=${paymentOrder.id} - transactor not running, skipping.")
                 Transactor.ResultState.STOPPED
             }
-            enableCheckPaymentOrderReceived && checkPaymentOrderReceived(paymentOrder) -> {
+            checkPaymentOrderReceived(paymentOrder) -> {
                 logger.info("PaymentOrder.id=${paymentOrder.id} - already processed (heavy-load?), skipping.")
                 Transactor.ResultState.INVALID_STATE
             }
@@ -51,6 +52,8 @@ class TransactorImpl(
             paymentOrderDao.updateState(paymentOrder.copy(state = PaymentOrderState.NO_FUNDS))
             Transactor.ResultState.NO_FUNDS
         } else {
+            beforeProcessBlock()
+
             val fromAccount = paymentOrder.fromAccount
             val toAccount = paymentOrder.toAccount
             logger.info("PaymentOrder.id=${paymentOrder.id} - sending money from account.id=${fromAccount.id} to account.id=${toAccount.id}")
@@ -70,6 +73,7 @@ class TransactorImpl(
 
             logger.info("PaymentOrder.id=${paymentOrder.id} - state updated to ${PaymentOrderState.OK}, commit...")
             paymentOrderDao.updateState(paymentOrder.copy(state = PaymentOrderState.OK))
+
             Transactor.ResultState.MONEY_SENT
         }
     }

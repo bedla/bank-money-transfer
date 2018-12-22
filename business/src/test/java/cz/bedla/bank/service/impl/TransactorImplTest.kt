@@ -15,11 +15,15 @@ import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.jooq.exception.DataChangedException
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.RepeatedTest
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
 import org.junitpioneer.jupiter.TempDirectory
 import java.nio.file.Path
 import java.time.OffsetDateTime
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
 
 @ExtendWith(TempDirectory::class)
 class TransactorImplTest {
@@ -45,28 +49,95 @@ class TransactorImplTest {
         fixture.start()
     }
 
-    @Test
+    @RepeatedTest(100)
     fun optimisticLockVersionCollision() {
-        val account1 = createTopUpAccount()
-        val account2 = createPersonalAccount("Mr. Bar", 1000)
+        val executor = Executors.newFixedThreadPool(2)
+        val beforeLatch = CountDownLatch(1)
+        val fixtureConcurrent = TransactorImpl(transactionDao, paymentOrderDao, accountDao, transactional) {
+            beforeLatch.await()
+        }
+        fixtureConcurrent.start()
 
-        val paymentOrder: PaymentOrder = transactional.execute {
+        val balance = 1000
+        val amount1 = 1
+        val amount2 = 2
+
+        val account1 = createTopUpAccount()
+        val account2 = createPersonalAccount("Mr. Bar", balance)
+
+        val paymentOrder1: PaymentOrder = transactional.execute {
             paymentOrderDao.create(
                 paymentOrder(
                     fromAccount = account1,
                     toAccount = account2,
                     state = PaymentOrderState.RECEIVED,
-                    amount = 999
+                    amount = amount1
+                )
+            )
+        }
+        val paymentOrder2: PaymentOrder = transactional.execute {
+            paymentOrderDao.create(
+                paymentOrder(
+                    fromAccount = account1,
+                    toAccount = account2,
+                    state = PaymentOrderState.RECEIVED,
+                    amount = amount2
                 )
             )
         }
 
-        // process transaction as usual
-        fixture.process(paymentOrder, true)
-        // process with same payment-order (version)
-        assertThatThrownBy { fixture.process(paymentOrder, false) }
-            .isInstanceOf(DataChangedException::class.java)
-            .hasMessage("Database record has been changed or doesn't exist any longer")
+        val future1 = executor.submit {
+            fixtureConcurrent.process(paymentOrder1)
+        }
+        val future2 = executor.submit {
+            fixtureConcurrent.process(paymentOrder2)
+        }
+
+        TimeUnit.MILLISECONDS.sleep(500)
+        beforeLatch.countDown()
+
+        TimeUnit.MILLISECONDS.sleep(500)
+        executor.shutdown()
+        executor.awaitTermination(5, TimeUnit.SECONDS)
+
+        val savedPaymentOrder1 = transactional.execute {
+            paymentOrderDao.findPaymentOrder(paymentOrder1.id)
+        } ?: error("Not found")
+        val savedPaymentOrder2 = transactional.execute {
+            paymentOrderDao.findPaymentOrder(paymentOrder2.id)
+        } ?: error("Not found")
+
+        if (savedPaymentOrder1.state == PaymentOrderState.OK) {
+            assertThat(savedPaymentOrder2.state).isEqualTo(PaymentOrderState.RECEIVED)
+
+            assertThat(savedPaymentOrder1.fromAccount.balance).isEqualByComparingTo(amount1.unaryMinus().toBigDecimal())
+            assertThat(savedPaymentOrder1.toAccount.balance).isEqualByComparingTo((balance + amount1).toBigDecimal())
+
+            assertThat(savedPaymentOrder2.fromAccount.balance).isEqualByComparingTo(amount1.unaryMinus().toBigDecimal())
+            assertThat(savedPaymentOrder2.toAccount.balance).isEqualByComparingTo((balance + amount1).toBigDecimal())
+
+            future1.get()
+            assertThatThrownBy {
+                future2.get()
+            }.hasCauseInstanceOf(DataChangedException::class.java)
+                .hasMessageContaining("Database record has been changed or doesn't exist any longer")
+        } else if (savedPaymentOrder1.state == PaymentOrderState.RECEIVED) {
+            assertThat(savedPaymentOrder2.state).isEqualTo(PaymentOrderState.OK)
+
+            assertThat(savedPaymentOrder1.fromAccount.balance).isEqualByComparingTo(amount2.unaryMinus().toBigDecimal())
+            assertThat(savedPaymentOrder1.toAccount.balance).isEqualByComparingTo((balance + amount2).toBigDecimal())
+
+            assertThat(savedPaymentOrder2.fromAccount.balance).isEqualByComparingTo(amount2.unaryMinus().toBigDecimal())
+            assertThat(savedPaymentOrder2.toAccount.balance).isEqualByComparingTo((balance + amount2).toBigDecimal())
+
+            assertThatThrownBy {
+                future1.get()
+            }.hasCauseInstanceOf(DataChangedException::class.java)
+                .hasMessageContaining("Database record has been changed or doesn't exist any longer")
+            future2.get()
+        } else {
+            error("Invalid paymentOrder states $paymentOrder1 and $paymentOrder2")
+        }
     }
 
     @Test
