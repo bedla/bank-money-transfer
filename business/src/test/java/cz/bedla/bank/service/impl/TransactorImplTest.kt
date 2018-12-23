@@ -49,24 +49,57 @@ class TransactorImplTest {
         fixture.start()
     }
 
+    @Test
+    fun optimisticLockBalanceChangesInMiddleOfTransaction() {
+        val executor = Executors.newFixedThreadPool(1)
+        val beforeLatch = MyCountDownLatch(1)
+        val fixtureConcurrent = TransactorImpl(transactionDao, paymentOrderDao, accountDao, transactional) {
+            beforeLatch.await()
+        }
+        fixtureConcurrent.start()
+
+        val account1 = createPersonalAccount("Mr. Bar", 1000)
+        val account2 = createWithdrawalAccount()
+
+        val paymentOrder: PaymentOrder = transactional.execute {
+            paymentOrderDao.create(
+                paymentOrder(
+                    fromAccount = account1,
+                    toAccount = account2,
+                    state = PaymentOrderState.RECEIVED,
+                    amount = 1000
+                )
+            )
+        }
+
+        val future = executor.submit {
+            fixtureConcurrent.process(paymentOrder)
+        }
+
+        await().atMost(5, TimeUnit.SECONDS).until { beforeLatch.awaitCount() == 1 }
+
+        transactional.run {
+            accountDao.updateBalance(account2.copy(balance = 123.toBigDecimal()))
+        }
+
+        beforeLatch.countDown()
+
+        awaitForFutures(future)
+
+        executor.shutdown()
+        executor.awaitTermination(5, TimeUnit.SECONDS)
+
+        assertNoPaymentOccurred(
+            account1, account2, paymentOrder, PaymentOrderState.RECEIVED,
+            expectedAccount1Balance = 1000,
+            expectedAccount2Balance = 123
+        )
+    }
+
     @RepeatedTest(100)
     fun optimisticLockVersionCollision() {
         val executor = Executors.newFixedThreadPool(2)
-        val beforeLatch = object : CountDownLatch(1) {
-            private val awaitCount = AtomicInteger()
-
-            override fun await() {
-                awaitCount.incrementAndGet()
-                super.await()
-            }
-
-            override fun await(timeout: Long, unit: TimeUnit?): Boolean {
-                awaitCount.incrementAndGet()
-                return super.await(timeout, unit)
-            }
-
-            fun awaitCount(): Int = awaitCount.get()
-        }
+        val beforeLatch = MyCountDownLatch(1)
         val fixtureConcurrent = TransactorImpl(transactionDao, paymentOrderDao, accountDao, transactional) {
             beforeLatch.await()
         }
@@ -152,19 +185,6 @@ class TransactorImplTest {
             future2.get()
         } else {
             error("Invalid paymentOrder states $paymentOrder1 and $paymentOrder2, ${future1.get()}, ${future2.get()}")
-        }
-    }
-
-    private fun awaitForFutures(future1: Future<*>, future2: Future<*>) {
-        try {
-            future1.get(30, TimeUnit.SECONDS)
-        } catch (e: ExecutionException) {
-            // value will be checked later
-        }
-        try {
-            future2.get(30, TimeUnit.SECONDS)
-        } catch (e: ExecutionException) {
-            // value will be checked later
         }
     }
 
@@ -326,6 +346,10 @@ class TransactorImplTest {
         accountDao.create(Account(AccountType.PERSONAL, name, OffsetDateTime.now(), balance.toBigDecimal()))
     }
 
+    private fun createWithdrawalAccount(): Account = transactional.execute {
+        accountDao.create(Account(AccountType.WITHDRAWAL, "Withdrawal", OffsetDateTime.now(), 0.toBigDecimal()))
+    }
+
     private fun createTopUpAccount(): Account = transactional.execute {
         accountDao.create(Account(AccountType.TOP_UP, "Top-up", OffsetDateTime.now(), 0.toBigDecimal()))
     }
@@ -339,14 +363,25 @@ class TransactorImplTest {
         account2: Account,
         paymentOrder: PaymentOrder,
         expectedState: PaymentOrderState,
-        expectedAccount1Balance: Int = 1000
+        expectedAccount1Balance: Int = 1000,
+        expectedAccount2Balance: Int = 1000
     ) {
         transactional.run {
             assertThat(transactionDao.findAccountTransactions(account1)).isEmpty()
             assertThat(transactionDao.findAccountTransactions(account2)).isEmpty()
             assertThat(paymentOrderDao.findPaymentOrder(paymentOrder.id)?.state).isEqualTo(expectedState)
             assertThat(accountDao.findAccount(account1.id)?.balance).isEqualTo(expectedAccount1Balance.toBigDecimal())
-            assertThat(accountDao.findAccount(account2.id)?.balance).isEqualTo(1000.toBigDecimal())
+            assertThat(accountDao.findAccount(account2.id)?.balance).isEqualTo(expectedAccount2Balance.toBigDecimal())
+        }
+    }
+
+    private fun awaitForFutures(vararg futures: Future<*>) {
+        for (future in futures) {
+            try {
+                future.get(30, TimeUnit.SECONDS)
+            } catch (e: ExecutionException) {
+                // value will be checked later
+            }
         }
     }
 
@@ -354,4 +389,21 @@ class TransactorImplTest {
     fun tearDown() {
         database.stop()
     }
+}
+
+
+private class MyCountDownLatch(count: Int) : CountDownLatch(count) {
+    private val awaitCount = AtomicInteger()
+
+    override fun await() {
+        awaitCount.incrementAndGet()
+        super.await()
+    }
+
+    override fun await(timeout: Long, unit: TimeUnit?): Boolean {
+        awaitCount.incrementAndGet()
+        return super.await(timeout, unit)
+    }
+
+    fun awaitCount(): Int = awaitCount.get()
 }

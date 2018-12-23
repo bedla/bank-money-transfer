@@ -47,13 +47,12 @@ class TransactorImpl(
     }
 
     private fun trySendMoney(paymentOrder: PaymentOrder) = transactional.execute {
+        beforeProcessBlock()
         if (isPersonalAccountWithoutFunds(paymentOrder)) {
             logger.info("PaymentOrder.id=${paymentOrder.id} - from account.id=${paymentOrder.fromAccount.id} does not have enough funds.")
             paymentOrderDao.updateState(paymentOrder.copy(state = PaymentOrderState.NO_FUNDS))
             Transactor.ResultState.NO_FUNDS
         } else {
-            beforeProcessBlock()
-
             val fromAccount = paymentOrder.fromAccount
             val toAccount = paymentOrder.toAccount
             logger.info("PaymentOrder.id=${paymentOrder.id} - sending money from account.id=${fromAccount.id} to account.id=${toAccount.id}")
